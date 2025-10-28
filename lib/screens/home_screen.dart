@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
+import '../widgets/event_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,11 +16,23 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String _error = '';
 
-  // Заглушка для баннеров (позже заменим на реальные)
-  final List<String> _banners = [
-    'https://via.placeholder.com/300x150/FF0000/FFFFFF?text=Новая+Коллекция',
-    'https://via.placeholder.com/300x150/00FF00/FFFFFF?text=Скидки+50%',
-    'https://via.placeholder.com/300x150/0000FF/FFFFFF?text=Осенняя+Распродажа',
+  // 🎯 БАННЕРЫ ИВЕНТОВ
+  final List<Map<String, dynamic>> _eventBanners = [
+    {
+      'image': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500',
+      'title': 'Новая Осенняя Коллекция',
+      'subtitle': 'Открой для себя свежие тренды',
+    },
+    {
+      'image': 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500',
+      'title': 'Распродажа до 50%',
+      'subtitle': 'Успей до конца недели',
+    },
+    {
+      'image': 'https://images.unsplash.com/photo-1601924582970-9238bcb495d9?w=500',
+      'title': 'Бестселлеры',
+      'subtitle': 'То, что выбирают другие',
+    },
   ];
 
   @override
@@ -43,58 +56,140 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 🎯 САМЫЕ ПОПУЛЯРНЫЕ (первые 4)
+  List<Product> get _popularProducts {
+    return _products.take(4).toList();
+  }
+
+  // 🎯 ПОСЛЕДНЯЯ КОЛЛЕКЦИЯ (следующие 4)
+  List<Product> get _latestCollection {
+    return _products.skip(4).take(4).toList();
+  }
+
+  // 🎯 ТОВАРЫ СО СКИДКОЙ (дорогие товары как "премиум")
+  List<Product> get _discountedProducts {
+    if (_products.isEmpty) return [];
+    final sorted = List<Product>.from(_products);
+    sorted.sort((a, b) => b.price.compareTo(a.price));
+    return sorted.take(4).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Карусель баннеров
-          SliverToBoxAdapter(
-            child: _buildBannerCarousel(),
-          ),
+      body: _isLoading
+          ? _buildLoadingScreen()
+          : _error.isNotEmpty
+          ? _buildErrorScreen()
+          : _buildHomeScreen(),
+    );
+  }
 
-          // Секция с товарами
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverGrid(
+  Widget _buildHomeScreen() {
+    return CustomScrollView(
+      slivers: [
+        // 🎯 APP BAR
+        const SliverAppBar(
+          title: Text('Fashion Store'),
+          floating: true,
+          snap: true,
+          backgroundColor: Colors.white,
+          elevation: 0,
+        ),
+
+        SliverToBoxAdapter(
+          child: EventBanner(
+            banners: _eventBanners,
+            height: 300,
+          ),
+        ),
+
+        // 🎯 СЕКЦИЯ: САМЫЕ ПОПУЛЯРНЫЕ
+        _buildProductSection(
+          title: '🔥 Самые популярные',
+          subtitle: 'То, что выбирают наши клиенты',
+          products: _popularProducts,
+        ),
+
+        // 🎯 СЕКЦИЯ: ПОСЛЕДНЯЯ КОЛЛЕКЦИЯ
+        _buildProductSection(
+          title: '🆕 Последняя коллекция',
+          subtitle: 'Самые свежие поступления',
+          products: _latestCollection,
+        ),
+
+        // 🎯 СЕКЦИЯ: ТОВАРЫ СО СКИДКОЙ
+        _buildProductSection(
+          title: '💰 Товары со скидкой',
+          subtitle: 'Особые предложения этой недели',
+          products: _discountedProducts,
+        ),
+      ],
+    );
+  }
+
+  // 🎯 УНИВЕРСАЛЬНАЯ СЕКЦИЯ ТОВАРОВ
+  Widget _buildProductSection({
+    required String title,
+    required String subtitle,
+    required List<Product> products,
+  }) {
+    if (products.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ЗАГОЛОВОК СЕКЦИИ
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // СЕТКА ТОВАРОВ 2x2
+            GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 childAspectRatio: 0.7,
               ),
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  return ProductCard(product: _products[index]);
-                },
-                childCount: _products.length,
-              ),
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                return ProductCard(product: products[index]);
+              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBannerCarousel() {
-    return Container(
-      height: 150,
-      margin: const EdgeInsets.all(16),
-      child: PageView.builder(
-        itemCount: _banners.length,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              image: DecorationImage(
-                image: NetworkImage(_banners[index]),
-                fit: BoxFit.cover,
-              ),
-            ),
-          );
-        },
-      ),
+  Widget _buildLoadingScreen() {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+
+  Widget _buildErrorScreen() {
+    return Center(
+      child: Text('Ошибка: $_error'),
     );
   }
 }
