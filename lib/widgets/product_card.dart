@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import '../models/product.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/favorite_service.dart';
+import '../models/product.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
+  final VoidCallback? onFavoriteChanged; // Добавляем callback
 
-  const ProductCard({super.key, required this.product});
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.onFavoriteChanged,
+  });
 
   @override
   State<ProductCard> createState() => _ProductCardState();
@@ -16,7 +22,6 @@ class _ProductCardState extends State<ProductCard> {
   bool _isFavorite = false;
   final PageController _pageController = PageController();
 
-  // заглушка
   List<String> get _productImages {
     return [
       widget.product.image,
@@ -24,6 +29,121 @@ class _ProductCardState extends State<ProductCard> {
       'https://via.placeholder.com/300/0000FF/FFFFFF?text=Image+3',
     ];
   }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteStatus();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    print('🔄 Загружаем статус лайка для товара ${widget.product.id}');
+    final isFav = await FavoriteService.isFavorite(widget.product.id);
+    if (mounted) {
+      setState(() {
+        _isFavorite = isFav;
+      });
+    }
+  }
+
+  void _toggleFavorite() async {
+    print('🎯 Нажатие на лайк для товара ${widget.product.id}');
+
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+
+    if (_isFavorite) {
+      await FavoriteService.addToFavorites(widget.product.id);
+    } else {
+      await FavoriteService.removeFromFavorites(widget.product.id);
+    }
+
+    // Вызываем callback для обновления родительского виджета
+    if (widget.onFavoriteChanged != null) {
+      widget.onFavoriteChanged!();
+    }
+  }
+
+  void _showAddToCartDialog() {
+    String selectedSize = 'M';
+    String selectedColor = 'Черный';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Добавить в корзину'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ВЫБОР РАЗМЕРА
+              const Text('Размер:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Wrap(
+                spacing: 8,
+                children: ['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) {
+                  return ChoiceChip(
+                    label: Text(size),
+                    selected: selectedSize == size,
+                    onSelected: (selected) {
+                      setState(() {
+                        selectedSize = size;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // ВЫБОР ЦВЕТА
+              const Text('Цвет:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Wrap(
+                spacing: 8,
+                children: ['Черный', 'Белый', 'Серый', 'Синий', 'Красный'].map((color) {
+                  return ChoiceChip(
+                    label: Text(color),
+                    selected: selectedColor == color,
+                    onSelected: (selected) {
+                      setState(() {
+                        selectedColor = color;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final cartItem = CartItem(
+                  productId: widget.product.id,
+                  title: widget.product.title,
+                  price: widget.product.price,
+                  image: widget.product.image,
+                  size: selectedSize,
+                  color: selectedColor,
+                  quantity: 1,
+                  maxQuantity: 10, // В реальном приложении брать из Firebase
+                );
+
+                CartService.addToCart(cartItem);
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Товар добавлен в корзину')),
+                );
+              },
+              child: const Text('Добавить'),
+            ),
+          ],
+        ),
+      ),
+    )
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +157,7 @@ class _ProductCardState extends State<ProductCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // БЛОК С ИЗОБРАЖЕНИЕМ (СВАЙП + ИНДИКАТОР)
+          // БЛОК С ИЗОБРАЖЕНИЕМ
           Stack(
             children: [
               // PAGE VIEW ДЛЯ СВАЙПА
@@ -106,23 +226,45 @@ class _ProductCardState extends State<ProductCard> {
                   ),
                 ),
 
-              // КНОПКА ИЗБРАННОГО
+              // 🎯 КНОПКА ИЗБРАННОГО
               Positioned(
                 top: 8,
                 right: 8,
                 child: GestureDetector(
+                  onTap: _toggleFavorite,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: _isFavorite ? Colors.red : Colors.black54,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: GestureDetector(
                   onTap: () {
-                    setState(() {
-                      _isFavorite = !_isFavorite;
-                    });
+                    _showAddToCartDialog();
                   },
                   child: Container(
                     width: 32,
                     height: 32,
-                    child: Icon(
-                      _isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: _isFavorite ? Colors.black54 : Colors.black54,
-                      size: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.shopping_cart_outlined,
+                      color: Colors.black54,
+                      size: 18,
                     ),
                   ),
                 ),
