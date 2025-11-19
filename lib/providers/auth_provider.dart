@@ -7,10 +7,12 @@ import '../models/app_user.dart';
 class AuthProvider with ChangeNotifier {
   AppUser? _user;
   bool _isLoading = false;
+  bool _isInitializing = true;
   String? _error;
 
   AppUser? get user => _user;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
   bool get isLoggedIn => _user?.isLoggedIn ?? false;
   bool get isAdmin => _user?.isAdmin ?? false;
   String? get error => _error;
@@ -20,52 +22,108 @@ class AuthProvider with ChangeNotifier {
   }
 
   void _init() {
-    FirebaseAuth.instance.authStateChanges().listen((firebaseUser) async {
+    print('🎯 AuthProvider инициализирован');
+    _user = AppUser.guest();
+    notifyListeners();
+
+    // Слушаем изменения аутентификации
+    FirebaseAuth.instance.authStateChanges().listen((User? firebaseUser) async {
+      print('🔄 Изменение состояния аутентификации: ${firebaseUser?.email}');
+
       if (firebaseUser == null) {
         _user = AppUser.guest();
+        print('👤 Установлен гостевой режим');
       } else {
+        print('👤 Пользователь из Firebase: ${firebaseUser.email}');
         await _loadUserData(firebaseUser.uid);
       }
+
+      // 🆕 Завершаем инициализацию
+      _isInitializing = false;
       notifyListeners();
+    });
+
+    // 🆕 Таймаут на случай если authStateChanges не сработает
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_isInitializing) {
+        print('⏰ Таймаут инициализации AuthProvider');
+        _isInitializing = false;
+        notifyListeners();
+      }
     });
   }
 
   Future<void> _loadUserData(String uid) async {
     try {
+      print('📥 Загрузка данных пользователя: $uid');
+
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .get();
 
-      final firebaseUser = FirebaseAuth.instance.currentUser!;
-
       if (doc.exists) {
-        _user = AppUser.fromFirebaseAuth(firebaseUser, doc.data());
-      } else {
-        // Создаем базового пользователя если нет в Firestore
+        final data = doc.data()!;
+        print('📄 Данные из Firestore: $data');
+
+        final role = _determineUserRole(data['email'] ?? '');
+        print('🎭 Определена роль: $role для email: ${data['email']}');
+
         _user = AppUser(
           uid: uid,
-          email: firebaseUser.email ?? '',
-          name: firebaseUser.displayName, // Может быть null
-          phone: firebaseUser.phoneNumber, // Может быть null
-          role: UserRole.user,
+          email: data['email'] ?? '',
+          name: data['name'] ?? 'Пользователь',
+          phone: data['phone'] ?? '',
+          role: role,
+          createdAt: data['createdAt']?.toDate(),
         );
+
+        print('✅ Пользователь загружен: ${_user?.email}, роль: ${_user?.role}');
+      } else {
+        print('❌ Пользователь не найден в Firestore, создаем запись...');
+
+        final firebaseUser = FirebaseAuth.instance.currentUser!;
+        final role = _determineUserRole(firebaseUser.email ?? '');
+
+        print('🎭 Новая роль: $role для email: ${firebaseUser.email}');
+
+        final newUser = AppUser(
+          uid: uid,
+          email: firebaseUser.email ?? '',
+          name: firebaseUser.displayName ?? 'Пользователь',
+          phone: firebaseUser.phoneNumber ?? '',
+          role: role,
+          createdAt: DateTime.now(),
+        );
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({
+          'email': newUser.email,
+          'name': newUser.name,
+          'phone': newUser.phone,
+          'role': describeEnum(newUser.role),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        _user = newUser;
+        print('✅ Создана новая запись в Firestore: ${newUser.email}');
       }
     } catch (e) {
-      print('Error loading user data: $e');
-      // Fallback на базовые данные из Firebase Auth
+      print('❌ Ошибка загрузки пользователя: $e');
       final firebaseUser = FirebaseAuth.instance.currentUser!;
       _user = AppUser(
         uid: uid,
         email: firebaseUser.email ?? '',
-        name: firebaseUser.displayName,
-        phone: firebaseUser.phoneNumber,
+        name: firebaseUser.displayName ?? 'Пользователь',
+        phone: firebaseUser.phoneNumber ?? '',
         role: UserRole.user,
       );
     }
   }
 
-  // В providers/auth_provider.dart обновите метод register:
+  // 🎯 РЕГИСТРАЦИЯ
   Future<void> register({
     required String email,
     required String password,
@@ -73,46 +131,58 @@ class AuthProvider with ChangeNotifier {
     required String phone,
   }) async {
     try {
-      print('🎯 НАЧАЛО РЕГИСТРАЦИИ');
-      print('📧 Email: $email');
-      print('👤 Имя: $name');
-      print('📞 Телефон: $phone');
-
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      // 🎯 ТЕСТОВАЯ РЕГИСТРАЦИЯ (временная)
-      print('🔧 Используем тестовую регистрацию');
+      print('🔄 Начало регистрации: $email');
+      print('📝 Данные: name=$name, phone=$phone');
 
-      await Future.delayed(const Duration(seconds: 1));
+      // 1. Создаем в Firebase Auth
+      print('1. Создаем пользователя в Firebase Auth...');
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
+      print('✅ Пользователь создан в Firebase Auth: ${userCredential.user?.uid}');
+
+      // 2. Определяем роль
       final UserRole role = _determineUserRole(email);
-      print('🎭 Определена роль: $role');
+      print('2. Определена роль: $role для email: $email');
 
-      _user = AppUser(
-        uid: 'test_uid_${DateTime.now().millisecondsSinceEpoch}',
-        email: email,
-        name: name,
-        phone: phone,
-        role: role,
-        createdAt: DateTime.now(),
-      );
+      // 3. Сохраняем в Firestore
+      print('3. Сохраняем в Firestore...');
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'role': describeEnum(role),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-      print('✅ РЕГИСТРАЦИЯ УСПЕШНА');
-      print('📊 Новый пользователь: ${_user?.toJson()}');
+      print('✅ Данные сохранены в Firestore');
 
-    } catch (e, stackTrace) {
-      print('❌ ОШИБКА РЕГИСТРАЦИИ: $e');
-      print('📋 StackTrace: $stackTrace');
-      _error = 'Произошла ошибка при регистрации: ${e.toString()}';
+      // 4. Обновляем displayName
+      print('4. Обновляем displayName...');
+      await userCredential.user!.updateDisplayName(name);
+
+      print('✅ Регистрация завершена успешно: $email');
+
+    } on FirebaseAuthException catch (e) {
+      print('❌ Ошибка Firebase Auth: ${e.code} - ${e.message}');
+      _error = _getAuthErrorMessage(e.code);
+    } catch (e) {
+      print('❌ Общая ошибка регистрации: $e');
+      _error = 'Произошла ошибка при регистрации: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // 🎯 Логин
+  // 🎯 ВХОД
   Future<void> login({
     required String email,
     required String password,
@@ -122,14 +192,18 @@ class AuthProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await FirebaseAuth.instance
+      print('🔄 Попытка входа: $email');
+
+      final userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
-      await _loadUserData(FirebaseAuth.instance.currentUser!.uid);
+      print('✅ Вход успешен: ${userCredential.user?.email}');
 
     } on FirebaseAuthException catch (e) {
+      print('❌ Ошибка входа: ${e.code} - ${e.message}');
       _error = _getAuthErrorMessage(e.code);
     } catch (e) {
+      print('❌ Общая ошибка входа: $e');
       _error = 'Произошла ошибка при входе: $e';
     } finally {
       _isLoading = false;
@@ -137,22 +211,29 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 🎯 Выход
   Future<void> logout() async {
     try {
       await FirebaseAuth.instance.signOut();
       _user = AppUser.guest();
-      notifyListeners();
+      print('✅ Выход выполнен');
     } catch (e) {
-      _error = 'Ошибка при выходе: $e';
+      _error = 'Ошибка при выходе';
+      print('❌ Ошибка выхода: $e');
+    } finally {
       notifyListeners();
     }
   }
 
   UserRole _determineUserRole(String email) {
+    print('🔍 Определение роли для email: $email');
     final domain = email.split('@').last.toLowerCase();
+    print('🔍 Домен email: $domain');
+
     const adminDomains = ['tommysinny.ru', 'company.com', 'admin.ru'];
-    return adminDomains.contains(domain) ? UserRole.admin : UserRole.user;
+    final isAdmin = adminDomains.contains(domain);
+
+    print('🎯 Результат: ${isAdmin ? 'ADMIN' : 'USER'}');
+    return isAdmin ? UserRole.admin : UserRole.user;
   }
 
   String _getAuthErrorMessage(String code) {
@@ -162,7 +243,7 @@ class AuthProvider with ChangeNotifier {
       case 'email-already-in-use': return 'Email уже используется';
       case 'weak-password': return 'Пароль слишком слабый';
       case 'invalid-email': return 'Неверный формат email';
-      default: return 'Произошла ошибка';
+      default: return 'Произошла ошибка: $code';
     }
   }
 

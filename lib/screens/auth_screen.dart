@@ -86,7 +86,7 @@ class _AuthScreenState extends State<AuthScreen> {
               height: 120,
               margin: const EdgeInsets.only(bottom: 40, top: 20),
               child: Image.asset(
-                'assets/images/brand_logo.png',
+                'assets/images/registration_logo1.png',
                 fit: BoxFit.contain,
               ),
             ),

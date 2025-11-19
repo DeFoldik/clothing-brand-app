@@ -56,4 +56,10 @@ class AppUser {
       'createdAt': createdAt?.millisecondsSinceEpoch,
     };
   }
+
+  @override
+  String toString() {
+    return 'AppUser{uid: $uid, email: $email, name: $name, role: $role, isAdmin: $isAdmin}';
+  }
+
 }

@@ -1,4 +1,7 @@
+// screens/splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import 'main_navigation_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     _animation = CurvedAnimation(
@@ -25,11 +28,25 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeIn,
     );
     _controller.forward();
-    _navigateToHome();
+    _waitForInitialization();
   }
 
-  void _navigateToHome() async {
-    await Future.delayed(const Duration(seconds: 2));
+  void _waitForInitialization() async {
+    // Ждем пока AuthProvider проинициализируется
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Подписываемся на изменения AuthProvider
+    final authProvider = Provider.of<AuthProvider>(
+        context,
+        listen: false
+    );
+
+    // Ждем завершения инициализации
+    while (authProvider.isInitializing) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    // Переходим на главный экран
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(

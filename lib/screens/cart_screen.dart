@@ -160,6 +160,10 @@ class _CartScreenState extends State<CartScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final isLoggedIn = authProvider.isLoggedIn;
 
+    if (authProvider.isInitializing) {
+      return _buildLoadingScreen();
+    }
+
     // 🎯 Для незарегистрированных пользователей
     if (!isLoggedIn) {
       return _buildGuestScreen(context);

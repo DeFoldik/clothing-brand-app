@@ -15,6 +15,10 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
 
+    if (authProvider.isInitializing) {
+      return _buildLoadingScreen();
+    }
+
     // 🎯 Для незарегистрированных пользователей
    if (!authProvider.isLoggedIn) {
       return const AuthScreen();
@@ -34,6 +38,14 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
       body: _buildUserProfile(context),
+    );
+  }
+
+  Widget _buildLoadingScreen() {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 
