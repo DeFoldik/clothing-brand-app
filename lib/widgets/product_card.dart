@@ -1,11 +1,13 @@
+// widgets/product_card.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/favorite_service.dart';
 import '../models/product.dart';
+import '../services/cart_service.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
-  final VoidCallback? onFavoriteChanged; // Добавляем callback
+  final VoidCallback? onFavoriteChanged;
 
   const ProductCard({
     super.key,
@@ -37,7 +39,6 @@ class _ProductCardState extends State<ProductCard> {
   }
 
   Future<void> _loadFavoriteStatus() async {
-    print('🔄 Загружаем статус лайка для товара ${widget.product.id}');
     final isFav = await FavoriteService.isFavorite(widget.product.id);
     if (mounted) {
       setState(() {
@@ -47,8 +48,6 @@ class _ProductCardState extends State<ProductCard> {
   }
 
   void _toggleFavorite() async {
-    print('🎯 Нажатие на лайк для товара ${widget.product.id}');
-
     setState(() {
       _isFavorite = !_isFavorite;
     });
@@ -59,91 +58,159 @@ class _ProductCardState extends State<ProductCard> {
       await FavoriteService.removeFromFavorites(widget.product.id);
     }
 
-    // Вызываем callback для обновления родительского виджета
     if (widget.onFavoriteChanged != null) {
       widget.onFavoriteChanged!();
     }
   }
 
-  void _showAddToCartDialog() {
+  // В ProductCard обновите метод _showAddToCartDialog
+  void _showAddToCartDialog() async {
     String selectedSize = 'M';
     String selectedColor = 'Черный';
+    bool _isLoading = true;
+    List<String> availableSizes = [];
+    List<String> availableColors = [];
+    Map<String, bool> sizeAvailability = {};
+    Map<String, bool> colorAvailability = {};
+
+    // Загружаем доступные размеры и цвета
+    availableSizes = await CartService.getAvailableSizes(widget.product.id);
+    availableColors = await CartService.getAvailableColors(widget.product.id);
+
+    // Устанавливаем первый доступный размер и цвет по умолчанию
+    if (availableSizes.isNotEmpty) selectedSize = availableSizes.first;
+    if (availableColors.isNotEmpty) selectedColor = availableColors.first;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Добавить в корзину'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ВЫБОР РАЗМЕРА
-              const Text('Размер:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Wrap(
-                spacing: 8,
-                children: ['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) {
-                  return ChoiceChip(
-                    label: Text(size),
-                    selected: selectedSize == size,
-                    onSelected: (selected) {
-                      setState(() {
-                        selectedSize = size;
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
+        builder: (context, setState) {
+          // Функция для проверки доступности при изменении выбора
+          void _checkAvailability() async {
+            final isAvailable = await CartService.checkAvailability(
+                widget.product.id,
+                selectedSize,
+                selectedColor
+            );
 
-              // ВЫБОР ЦВЕТА
-              const Text('Цвет:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Wrap(
-                spacing: 8,
-                children: ['Черный', 'Белый', 'Серый', 'Синий', 'Красный'].map((color) {
-                  return ChoiceChip(
-                    label: Text(color),
-                    selected: selectedColor == color,
-                    onSelected: (selected) {
-                      setState(() {
-                        selectedColor = color;
-                      });
-                    },
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          }
+
+          // Первоначальная проверка
+          if (_isLoading) {
+            _checkAvailability();
+          }
+
+          return AlertDialog(
+            title: const Text('Добавить в корзину'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ВЫБОР РАЗМЕРА
+                const Text('Размер:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: availableSizes.map((size) {
+                    return ChoiceChip(
+                      label: Text(size),
+                      selected: selectedSize == size,
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedSize = size;
+                          _isLoading = true;
+                        });
+                        _checkAvailability();
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                // ВЫБОР ЦВЕТА
+                const Text('Цвет:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: availableColors.map((color) {
+                    return ChoiceChip(
+                      label: Text(color),
+                      selected: selectedColor == color,
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedColor = color;
+                          _isLoading = true;
+                        });
+                        _checkAvailability();
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ИНФОРМАЦИЯ О НАЛИЧИИ
+                if (_isLoading)
+                  const CircularProgressIndicator()
+                else
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green[700], size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Размер ${selectedSize}, цвет $selectedColor в наличии',
+                          style: TextStyle(
+                            color: Colors.green[700],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: _isLoading ? null : () {
+                  final cartProduct = CartProduct(
+                    product: widget.product,
+                    size: selectedSize,
+                    color: selectedColor,
+                    quantity: 1,
                   );
-                }).toList(),
+
+                  CartService.addToCart(cartProduct);
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Товар добавлен в корзину')),
+                  );
+                },
+                child: const Text('Добавить'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final cartItem = CartItem(
-                  productId: widget.product.id,
-                  title: widget.product.title,
-                  price: widget.product.price,
-                  image: widget.product.image,
-                  size: selectedSize,
-                  color: selectedColor,
-                  quantity: 1,
-                  maxQuantity: 10, // В реальном приложении брать из Firebase
-                );
-
-                CartService.addToCart(cartItem);
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Товар добавлен в корзину')),
-                );
-              },
-              child: const Text('Добавить'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
-    )
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,13 +314,13 @@ class _ProductCardState extends State<ProductCard> {
                   ),
                 ),
               ),
+
+              // 🎯 КНОПКА КОРЗИНЫ
               Positioned(
                 bottom: 8,
                 right: 8,
                 child: GestureDetector(
-                  onTap: () {
-                    _showAddToCartDialog();
-                  },
+                  onTap: _showAddToCartDialog,
                   child: Container(
                     width: 32,
                     height: 32,
@@ -270,7 +337,7 @@ class _ProductCardState extends State<ProductCard> {
                 ),
               ),
             ],
-          ),
+          ), // Закрывающая скобка для Stack
 
           // ИНФОРМАЦИЯ О ТОВАРЕ
           Padding(

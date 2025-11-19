@@ -1,7 +1,7 @@
 // screens/cart_screen.dart
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import '../services/cart_service.dart';
+import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'auth_screen.dart';
 
@@ -13,7 +13,7 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  List<CartItem> _cartItems = [];
+  List<CartProduct> _cartItems = [];
   double _totalPrice = 0.0;
   bool _isLoading = true;
 
@@ -45,9 +45,9 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  void _updateQuantity(CartItem item, int newQuantity) async {
+  void _updateQuantity(CartProduct item, int newQuantity) async {
     await CartService.updateQuantity(
-        item.productId,
+        item.product.id,
         item.size,
         item.color,
         newQuantity
@@ -55,12 +55,12 @@ class _CartScreenState extends State<CartScreen> {
     _loadCart(); // Перезагружаем корзину
   }
 
-  void _removeItem(CartItem item) async {
-    await CartService.removeFromCart(item.productId, item.size, item.color);
+  void _removeItem(CartProduct item) async {
+    await CartService.removeFromCart(item.product.id, item.size, item.color);
     _loadCart(); // Перезагружаем корзину
   }
 
-  void _buyItem(CartItem item) {
+  void _buyItem(CartProduct item) {
     // Логика покупки одного товара
     _showOrderDialog([item]);
   }
@@ -72,7 +72,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  void _showOrderDialog(List<CartItem> items) {
+  void _showOrderDialog(List<CartProduct> items) {
     final total = items.fold(0.0, (sum, item) => sum + item.totalPrice);
 
     showDialog(
@@ -94,9 +94,6 @@ class _CartScreenState extends State<CartScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // Здесь можно добавить логику очистки корзины после покупки
-              // CartService.clearCart();
-              // _loadCart();
             },
             child: const Text('OK'),
           ),
@@ -105,14 +102,67 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  Widget _buildGuestScreen(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Корзина')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.shopping_cart_outlined,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Корзина доступна только\nзарегистрированным пользователям',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Войдите или зарегистрируйтесь,\nчтобы добавлять товары в корзину',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AuthScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text(
+                    'Войти или зарегистрироваться',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = AuthProvider.of(context);
-    final isLoggedIn = authProvider?.isLoggedIn ?? false;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isLoggedIn = authProvider.isLoggedIn;
 
     // 🎯 Для незарегистрированных пользователей
     if (!isLoggedIn) {
-      return _buildGuestScreen();
+      return _buildGuestScreen(context);
     }
 
     return Scaffold(
@@ -137,73 +187,6 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // 🎯 Экран для гостей
-  Widget _buildGuestScreen() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Корзина'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.shopping_cart_outlined,
-                size: 80,
-                color: Colors.grey[400],
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Корзина доступна только\nзарегистрированным пользователям',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Войдите или зарегистрируйтесь,\nчтобы добавлять товары в корзину',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AuthScreen()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Войти или зарегистрироваться',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // 🎯 Корзина с товарами
   Widget _buildCartWithItems() {
     return ListView.builder(
@@ -216,143 +199,158 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // 🎯 Виджет товара в корзине
-  Widget _buildCartItem(CartItem item) {
+  // 🎯 Виджет товара в корзине (похоже на Wildberries)
+  // В cart_screen.dart обновите метод _buildCartItem
+  Widget _buildCartItem(CartProduct item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            // 🎯 ИЗОБРАЖЕНИЕ ТОВАРА
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(
-                  image: NetworkImage(item.image),
-                  fit: BoxFit.cover,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 🎯 ИЗОБРАЖЕНИЕ ТОВАРА
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    image: DecorationImage(
+                      image: NetworkImage(item.product.image),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 16),
+
+                // 🎯 ИНФОРМАЦИЯ О ТОВАРЕ
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.product.title.length > 40
+                            ? '${item.product.title.substring(0, 40)}...'
+                            : item.product.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+
+                      // ЦЕНА
+                      Text(
+                        '\$${item.product.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // РАЗМЕР И ЦВЕТ
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Размер: ${item.size}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Цвет: ${item.color}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
 
-            // 🎯 ИНФОРМАЦИЯ О ТОВАРЕ
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title.length > 40
-                        ? '${item.title.substring(0, 40)}...'
-                        : item.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
+            const SizedBox(height: 16),
+
+            // 🎯 УПРАВЛЕНИЕ КОЛИЧЕСТВОМ И КНОПКИ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+            Row(
+              children: [
+                // СЧЕТЧИК КОЛИЧЕСТВА
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(height: 8),
-
-                  // ЦЕНА
-                  Text(
-                    '\$${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // РАЗМЕР И ЦВЕТ
-                  Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Размер: ${item.size}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Цвет: ${item.color}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // 🎯 УПРАВЛЕНИЕ КОЛИЧЕСТВОМ И КНОПКИ
-                  Row(
-                    children: [
-                      // СЧЕТЧИК КОЛИЧЕСТВА
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: item.quantity > 1
-                                  ? () => _updateQuantity(item, item.quantity - 1)
-                                  : null,
-                              icon: const Icon(Icons.remove, size: 18),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 36),
-                            ),
-                            SizedBox(
-                              width: 30,
-                              child: Text(
-                                item.quantity.toString(),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: item.quantity < item.maxQuantity
-                                  ? () => _updateQuantity(item, item.quantity + 1)
-                                  : null,
-                              icon: const Icon(Icons.add, size: 18),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 36),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-
-                      // КНОПКА КУПИТЬ
-                      OutlinedButton(
-                        onPressed: () => _buyItem(item),
-                        child: const Text('Купить'),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // КНОПКА УДАЛИТЬ
                       IconButton(
-                        onPressed: () => _removeItem(item),
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: item.quantity > 1
+                            ? () => _updateQuantity(item, item.quantity - 1)
+                            : null,
+                        icon: const Icon(Icons.remove, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
+                      SizedBox(
+                        width: 30,
+                        child: Text(
+                          item.quantity.toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: item.quantity < 10
+                            ? () => _updateQuantity(item, item.quantity + 1)
+                            : null,
+                        icon: const Icon(Icons.add, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                const Spacer(),
+
+                // КНОПКА КУПИТЬ
+                OutlinedButton(
+                  onPressed: () => _buyItem(item),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: const Text('Купить'),
+                ),
+                const SizedBox(width: 8),
+
+                // КНОПКА УДАЛИТЬ
+                IconButton(
+                  onPressed: () => _removeItem(item),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                ),
+              ],
             ),
           ],
         ),
@@ -391,7 +389,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               Text(
-                '\$$_totalPrice',
+                '\$${_totalPrice.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

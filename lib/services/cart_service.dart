@@ -1,45 +1,39 @@
 // services/cart_service.dart
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import '../models/product.dart';
 
 class CartService {
   static const String _cartKey = 'user_cart';
 
   // 🎯 Модель товара в корзине
-  static Map<String, dynamic> cartItemToJson(CartItem item) {
+  static Map<String, dynamic> _cartProductToJson(CartProduct item) {
     return {
-      'productId': item.productId,
-      'title': item.title,
-      'price': item.price,
-      'image': item.image,
+      'product': item.product.toJson(),
       'size': item.size,
       'color': item.color,
       'quantity': item.quantity,
-      'maxQuantity': item.maxQuantity,
     };
   }
 
-  static CartItem cartItemFromJson(Map<String, dynamic> json) {
-    return CartItem(
-      productId: json['productId'],
-      title: json['title'],
-      price: json['price']?.toDouble() ?? 0.0,
-      image: json['image'],
+  static CartProduct _cartProductFromJson(Map<String, dynamic> json) {
+    return CartProduct(
+      product: Product.fromJson(json['product']),
       size: json['size'],
       color: json['color'],
       quantity: json['quantity'] ?? 1,
-      maxQuantity: json['maxQuantity'] ?? 10,
     );
   }
 
   // 🎯 Получить корзину
-  static Future<List<CartItem>> getCartItems() async {
+  static Future<List<CartProduct>> getCartItems() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cartJson = prefs.getString(_cartKey);
 
       if (cartJson != null) {
         final List<dynamic> cartList = json.decode(cartJson);
-        return cartList.map((item) => cartItemFromJson(item)).toList();
+        return cartList.map((item) => _cartProductFromJson(item)).toList();
       }
     } catch (e) {
       print('Error getting cart: $e');
@@ -48,25 +42,19 @@ class CartService {
   }
 
   // 🎯 Добавить товар в корзину
-  static Future<void> addToCart(CartItem item) async {
+  static Future<void> addToCart(CartProduct item) async {
     try {
       final cart = await getCartItems();
 
-      // Проверяем, есть ли уже такой товар с таким размером и цветом
       final existingIndex = cart.indexWhere((cartItem) =>
-      cartItem.productId == item.productId &&
+      cartItem.product.id == item.product.id &&
           cartItem.size == item.size &&
           cartItem.color == item.color
       );
 
       if (existingIndex != -1) {
-        // Увеличиваем количество если товар уже есть
         cart[existingIndex].quantity += item.quantity;
-        if (cart[existingIndex].quantity > cart[existingIndex].maxQuantity) {
-          cart[existingIndex].quantity = cart[existingIndex].maxQuantity;
-        }
       } else {
-        // Добавляем новый товар
         cart.add(item);
       }
 
@@ -81,13 +69,13 @@ class CartService {
     try {
       final cart = await getCartItems();
       final index = cart.indexWhere((item) =>
-      item.productId == productId &&
+      item.product.id == productId &&
           item.size == size &&
           item.color == color
       );
 
       if (index != -1) {
-        cart[index].quantity = quantity.clamp(1, cart[index].maxQuantity);
+        cart[index].quantity = quantity.clamp(1, 10);
         await _saveCart(cart);
       }
     } catch (e) {
@@ -100,7 +88,7 @@ class CartService {
     try {
       final cart = await getCartItems();
       cart.removeWhere((item) =>
-      item.productId == productId &&
+      item.product.id == productId &&
           item.size == size &&
           item.color == color
       );
@@ -108,6 +96,45 @@ class CartService {
     } catch (e) {
       print('Error removing from cart: $e');
     }
+  }
+
+  static Future<List<String>> getAvailableSizes(int productId) async {
+    // Заглушка - в реальном приложении брать из Firebase
+    // Здесь можно сделать запрос к вашему бэкенду
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Для демонстрации возвращаем все размеры, но можно добавить логику
+    // Например, для некоторых товаров ограничить размеры
+    final allSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+    // Пример логики: если товар дорогой, ограничиваем размеры
+    // if (productId % 3 == 0) return ['S', 'M', 'L'];
+
+    return allSizes;
+  }
+
+  // 🎯 Получить доступные цвета для товара
+  static Future<List<String>> getAvailableColors(int productId) async {
+    // Заглушка - в реальном приложении брать из Firebase
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    final allColors = ['Черный', 'Белый', 'Серый', 'Синий', 'Красный', 'Зеленый'];
+
+    // Пример логики: для разных категорий разные цвета
+    // if (productId % 2 == 0) return ['Черный', 'Белый', 'Серый'];
+
+    return allColors;
+  }
+
+  static Future<bool> checkAvailability(int productId, String size, String color) async {
+    // В реальном приложении проверять в Firebase
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    // Заглушка - всегда в наличии
+    // Можно добавить логику, например:
+    // if (size == 'XS' && color == 'Красный') return false;
+
+    return true;
   }
 
   // 🎯 Очистить корзину
@@ -121,50 +148,60 @@ class CartService {
   }
 
   // 🎯 Сохранить корзину
-  static Future<void> _saveCart(List<CartItem> cart) async {
+  static Future<void> _saveCart(List<CartProduct> cart) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cartJson = json.encode(cart.map((item) => cartItemToJson(item)).toList());
+      final cartJson = json.encode(cart.map((item) => _cartProductToJson(item)).toList());
       await prefs.setString(_cartKey, cartJson);
     } catch (e) {
       print('Error saving cart: $e');
     }
   }
 
-  // 🎯 Получить общую стоимость
+  // 🎯 Получить общую стоимость (ИСПРАВЛЕННАЯ ВЕРСИЯ)
   static Future<double> getTotalPrice() async {
-    final cart = await getCartItems();
-    return cart.fold(0.0, (total, item) => total + (item.price * item.quantity));
+    try {
+      final cart = await getCartItems();
+      double total = 0.0;
+      for (final item in cart) {
+        total += item.product.price * item.quantity;
+      }
+      return total;
+    } catch (e) {
+      print('Error calculating total price: $e');
+      return 0.0;
+    }
   }
 
-  // 🎯 Получить общее количество товаров
+  // 🎯 Получить общее количество товаров (ИСПРАВЛЕННАЯ ВЕРСИЯ)
   static Future<int> getTotalItems() async {
-    final cart = await getCartItems();
-    return cart.fold(0, (total, item) => total + item.quantity);
+    try {
+      final cart = await getCartItems();
+      int total = 0;
+      for (final item in cart) {
+        total += item.quantity;
+      }
+      return total;
+    } catch (e) {
+      print('Error calculating total items: $e');
+      return 0;
+    }
   }
 }
 
-// 🎯 Модель товара в корзине
-class CartItem {
-  final int productId;
-  final String title;
-  final double price;
-  final String image;
+// 🎯 Модель товара в корзине (обертка над Product)
+class CartProduct {
+  final Product product;
   final String size;
   final String color;
   int quantity;
-  final int maxQuantity;
 
-  CartItem({
-    required this.productId,
-    required this.title,
-    required this.price,
-    required this.image,
+  CartProduct({
+    required this.product,
     required this.size,
     required this.color,
     this.quantity = 1,
-    this.maxQuantity = 10,
   });
 
-  double get totalPrice => price * quantity;
+  double get totalPrice => product.price * quantity;
 }
