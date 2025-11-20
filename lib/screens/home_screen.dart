@@ -172,7 +172,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               itemCount: products.length,
               itemBuilder: (context, index) {
-                return ProductCard(product: products[index]);
+                return ProductCard(
+                  product: products[index],
+                  onFavoriteChanged: () {
+                    // При изменении избранного можно обновить список если нужно
+                    setState(() {});
+                  },
+                );
               },
             ),
           ],

@@ -370,7 +370,13 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         itemCount: _searchResults.length,
         itemBuilder: (context, index) {
-          return ProductCard(product: _searchResults[index]);
+          return ProductCard(
+            product: _searchResults[index],
+            onFavoriteChanged: () {
+              // Обновляем поиск при изменении избранного
+              _performSearch();
+            },
+          );
         },
       ),
     );

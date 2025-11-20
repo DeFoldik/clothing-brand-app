@@ -28,6 +28,20 @@ class FavoriteService {
     }
   }
 
+  static Future<void> toggleFavorite(int productId) async {
+    try {
+      final isCurrentlyFavorite = await isFavorite(productId);
+
+      if (isCurrentlyFavorite) {
+        await removeFromFavorites(productId);
+      } else {
+        await addToFavorites(productId);
+      }
+    } catch (e) {
+      print('❌ Ошибка переключения избранного: $e');
+    }
+  }
+
   static Future<void> addToFavorites(int productId) async {
     try {
       print('➕ Добавляем товар $productId в избранное...');

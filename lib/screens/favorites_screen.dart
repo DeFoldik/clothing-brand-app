@@ -138,10 +138,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             childAspectRatio: 0.7,
           ),
           itemCount: _favoriteProducts.length,
+          // В favorites_screen.dart найдите _buildFavoritesGrid
           itemBuilder: (context, index) {
             return ProductCard(
               product: _favoriteProducts[index],
-              onFavoriteChanged: _onFavoriteChanged, // Передаем callback
+              onFavoriteChanged: _onFavoriteChanged,
             );
           },
         ),

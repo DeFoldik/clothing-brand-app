@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../services/favorite_service.dart';
 import '../models/product.dart';
 import '../services/cart_service.dart';
+import '../screens/poduct_detail_screen.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
@@ -61,6 +62,67 @@ class _ProductCardState extends State<ProductCard> {
     if (widget.onFavoriteChanged != null) {
       widget.onFavoriteChanged!();
     }
+  }
+
+  // 🆕 МЕТОД ДЛЯ ОТОБРАЖЕНИЯ ЦЕНЫ СО СКИДКОЙ
+  // 🆕 КОМПАКТНЫЙ МЕТОД ДЛЯ ЦЕНЫ БЕЗ ПЕРЕПОЛНЕНИЯ
+  Widget _buildPriceWithDiscount() {
+    final hasDiscount = widget.product.id % 2 == 0;
+    final discountPrice = hasDiscount ? widget.product.price * 0.7 : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasDiscount && discountPrice != null) ...[
+          Row(
+            children: [
+              Text(
+                '\$${discountPrice.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '-30%',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '\$${widget.product.price.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+        ] else ...[
+          Text(
+            '\$${widget.product.price.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   // В ProductCard обновите метод _showAddToCartDialog
@@ -212,15 +274,61 @@ class _ProductCardState extends State<ProductCard> {
     );
   }
 
+  Widget _buildPriceSection() {
+    final hasDiscount = widget.product.price > 50; // Заглушка для демо скидки
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasDiscount) ...[
+          Text(
+            '\$${(widget.product.price * 0.7).toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          Text(
+            '\$${widget.product.price.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+        ] else ...[
+          Text(
+            '\$${widget.product.price.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasMultipleImages = _productImages.length > 1;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(product: widget.product),
+          ),
+        );
+      },
+      child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(16),
+          ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,7 +337,7 @@ class _ProductCardState extends State<ProductCard> {
             children: [
               // PAGE VIEW ДЛЯ СВАЙПА
               Container(
-                height: 180,
+                height: 160,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   borderRadius: BorderRadius.vertical(
@@ -346,15 +454,7 @@ class _ProductCardState extends State<ProductCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ЦЕНА
-                Text(
-                  '\$${widget.product.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-
+                _buildPriceWithDiscount(),
                 const SizedBox(height: 4),
 
                 // НАЗВАНИЕ ТОВАРА
@@ -376,6 +476,7 @@ class _ProductCardState extends State<ProductCard> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
