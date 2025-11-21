@@ -1,107 +1,119 @@
 // services/favorite_service.dart
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_favorite_service.dart';
+import 'shared_prefs_favorite_service.dart';
+import 'firestore_service.dart';
+import '../models/product.dart';
 
 class FavoriteService {
-  static const String _favoritesKey = 'user_favorites';
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // 🎯 Определяем, какой сервис использовать
+  static bool get _useFirebase => _auth.currentUser != null;
+
+  // 🎯 Получить список ID избранных товаров
   static Future<List<int>> getFavoriteIds() async {
+    if (_useFirebase) {
+      return await FirebaseFavoriteService.getFavoriteIds();
+    } else {
+      return await SharedPrefsFavoriteService.getFavoriteIds();
+    }
+  }
+
+  static Future<List<Product>> getFavoriteProducts() async {
     try {
-      print('🔍 Получаем лайки из SharedPreferences...');
-      final prefs = await SharedPreferences.getInstance();
-      final favoritesJson = prefs.getString(_favoritesKey);
+      final favoriteIds = await getFavoriteIds();
 
-      print('📁 Данные из SharedPreferences: $favoritesJson');
+      if (favoriteIds.isEmpty) return [];
 
-      if (favoritesJson != null) {
-        final List<dynamic> favoritesList = json.decode(favoritesJson);
-        final result = favoritesList.map((id) => id as int).toList();
-        print('✅ Лайки получены: $result');
-        return result;
-      } else {
-        print('ℹ️ Лайков нет, возвращаем пустой список');
-        return [];
-      }
+      // 🎯 ИСПОЛЬЗУЕМ FIREBASE ДЛЯ ПОЛУЧЕНИЯ ТОВАРОВ
+      return await FirestoreService.getProductsByIds(favoriteIds);
     } catch (e) {
-      print('❌ Ошибка получения лайков: $e');
+      print('❌ Ошибка получения избранных товаров: $e');
       return [];
     }
   }
 
-  static Future<void> toggleFavorite(int productId) async {
-    try {
-      final isCurrentlyFavorite = await isFavorite(productId);
-
-      if (isCurrentlyFavorite) {
-        await removeFromFavorites(productId);
-      } else {
-        await addToFavorites(productId);
-      }
-    } catch (e) {
-      print('❌ Ошибка переключения избранного: $e');
-    }
-  }
-
+  // 🎯 Добавить товар в избранное
   static Future<void> addToFavorites(int productId) async {
-    try {
-      print('➕ Добавляем товар $productId в избранное...');
-      final favorites = await getFavoriteIds();
-
-      if (!favorites.contains(productId)) {
-        favorites.add(productId);
-        await _saveFavorites(favorites);
-        print('✅ Товар $productId успешно добавлен в избранное');
-      } else {
-        print('ℹ️ Товар $productId уже в избранном');
-      }
-    } catch (e) {
-      print('❌ Ошибка добавления в избранное: $e');
+    if (_useFirebase) {
+      await FirebaseFavoriteService.addToFavorites(productId);
+    } else {
+      await SharedPrefsFavoriteService.addToFavorites(productId);
     }
   }
 
+  // 🎯 Удалить товар из избранного
   static Future<void> removeFromFavorites(int productId) async {
-    try {
-      print('➖ Удаляем товар $productId из избранного...');
-      final favorites = await getFavoriteIds();
-      final wasRemoved = favorites.remove(productId);
-
-      if (wasRemoved) {
-        await _saveFavorites(favorites);
-        print('✅ Товар $productId успешно удален из избранного');
-      } else {
-        print('ℹ️ Товар $productId не был в избранном');
-      }
-    } catch (e) {
-      print('❌ Ошибка удаления из избранного: $e');
+    if (_useFirebase) {
+      await FirebaseFavoriteService.removeFromFavorites(productId);
+    } else {
+      await SharedPrefsFavoriteService.removeFromFavorites(productId);
     }
   }
 
+  // 🎯 Проверить, находится ли товар в избранном
   static Future<bool> isFavorite(int productId) async {
-    final favorites = await getFavoriteIds();
-    final result = favorites.contains(productId);
-    print('${result ? '❤️' : '🤍'} Товар $productId ${result ? 'в' : 'не в'} избранном');
-    return result;
-  }
-
-  static Future<void> _saveFavorites(List<int> favorites) async {
-    try {
-      print('💾 Сохраняем лайки: $favorites');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_favoritesKey, json.encode(favorites));
-      print('✅ Лайки успешно сохранены');
-    } catch (e) {
-      print('❌ Ошибка сохранения лайков: $e');
+    if (_useFirebase) {
+      return await FirebaseFavoriteService.isFavorite(productId);
+    } else {
+      return await SharedPrefsFavoriteService.isFavorite(productId);
     }
   }
 
+  // 🎯 Переключить состояние избранного
+  static Future<void> toggleFavorite(int productId) async {
+    if (_useFirebase) {
+      await FirebaseFavoriteService.toggleFavorite(productId);
+    } else {
+      await SharedPrefsFavoriteService.toggleFavorite(productId);
+    }
+  }
+
+  // 🎯 Получить Stream для实时 обновлений (только для Firebase)
+  static Stream<List<int>> get favoritesStream {
+    if (_useFirebase) {
+      return FirebaseFavoriteService.favoritesStream;
+    } else {
+      // Для локального хранилища возвращаем пустой stream
+      return Stream.value([]);
+    }
+  }
+
+  // 🎯 Очистить все избранное
   static Future<void> clearFavorites() async {
+    if (_useFirebase) {
+      await FirebaseFavoriteService.clearFavorites();
+    } else {
+      await SharedPrefsFavoriteService.clearFavorites();
+    }
+  }
+
+  // 🎯 Миграция лайков при входе пользователя
+  static Future<void> migrateFavoritesOnLogin(String userId) async {
     try {
-      print('🗑️ Очищаем все лайки...');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_favoritesKey);
-      print('✅ Все лайки очищены');
+      print('🔄 Миграция лайков при входе пользователя...');
+
+      // Получаем локальные лайки
+      final localFavorites = await SharedPrefsFavoriteService.getFavoriteIds();
+      print('📦 Локальные лайки для миграции: $localFavorites');
+
+      if (localFavorites.isEmpty) {
+        print('ℹ️ Нет локальных лайков для миграции');
+        return;
+      }
+
+      // Добавляем каждый лайк в Firebase
+      for (final productId in localFavorites) {
+        await FirebaseFavoriteService.addToFavorites(productId);
+      }
+
+      // Очищаем локальные лайки после успешной миграции
+      await SharedPrefsFavoriteService.clearFavorites();
+
+      print('✅ Миграция лайков завершена успешно');
     } catch (e) {
-      print('❌ Ошибка очистки лайков: $e');
+      print('❌ Ошибка миграции лайков: $e');
     }
   }
 }

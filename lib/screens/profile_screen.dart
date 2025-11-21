@@ -7,6 +7,8 @@ import 'order_history_screen.dart';
 import 'admin_panel_screen.dart';
 import '../models/app_user.dart';
 import 'debug_screen.dart';
+import 'address_management_screen.dart';
+import 'account_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -158,15 +160,6 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // 🎯 ИЗБРАННОЕ
-        _buildProfileCard(
-          icon: Icons.favorite,
-          title: 'Избранное',
-          subtitle: 'Список понравившихся товаров',
-          onTap: () => Navigator.pushNamed(context, '/favorites'),
-        ),
-        const SizedBox(height: 16),
-
         // 🎯 АДРЕСА ДОСТАВКИ
         _buildProfileCard(
           icon: Icons.location_on,
@@ -268,16 +261,16 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _showAccountSettings(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => AccountSettingsBottomSheet(),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AccountSettingsScreen()),
     );
   }
 
   void _showAddressManagement(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Управление адресами - скоро будет!')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddressManagementScreen()),
     );
   }
 

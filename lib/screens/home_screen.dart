@@ -57,32 +57,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // 🎯 СЕКЦИЯ: САМЫЕ ПОПУЛЯРНЫЕ
           _buildProductSectionStream(
-            title: '🔥 Самые популярные',
-            subtitle: 'То, что выбирают наши клиенты',
+            title: 'Самые популярные',
             stream: FirestoreService.getPopularProducts(),
           ),
 
           // 🎯 СЕКЦИЯ: НОВИНКИ
           _buildProductSectionStream(
-            title: '🆕 Новинки',
-            subtitle: 'Самые свежие поступления',
+            title: 'Новинки',
             stream: FirestoreService.getNewProducts(),
           ),
 
           // 🎯 СЕКЦИЯ: ТОВАРЫ СО СКИДКОЙ
           _buildProductSectionStream(
-            title: '💰 Товары со скидкой',
-            subtitle: 'Особые предложения этой недели',
+            title: 'Товары со скидкой',
             stream: FirestoreService.getDiscountedProducts(),
           ),
 
-          // 🎯 СЕКЦИЯ: КАТЕГОРИИ
-          _buildCategoriesSection(),
-
           // 🎯 СЕКЦИЯ: ВСЕ ТОВАРЫ
           _buildProductSectionStream(
-            title: '🛍️ Все товары',
-            subtitle: 'Полный ассортимент магазина',
+            title: 'Все товары',
             stream: FirestoreService.getProductsStream(),
           ),
         ],
@@ -178,12 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // 🎯 УНИВЕРСАЛЬНАЯ СЕКЦИЯ ТОВАРОВ С STREAM
   Widget _buildProductSectionStream({
     required String title,
-    required String subtitle,
     required Stream<List<Product>> stream,
   }) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), // Уменьшили нижний отступ
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -194,15 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8), // Уменьшили отступ до 4px
 
             StreamBuilder<List<Product>>(
               stream: stream,
@@ -230,15 +214,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 СЕТКА ТОВАРОВ
+// 🎯 СЕТКА ТОВАРОВ - убираем лишние отступы
   Widget _buildProductsGrid(List<Product> products) {
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
+      padding: EdgeInsets.zero, // Убираем внутренние отступы
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        crossAxisSpacing: 12, // Можно уменьшить до 8 если нужно
+        mainAxisSpacing: 12,  // Можно уменьшить до 8 если нужно
         childAspectRatio: 0.7,
       ),
       itemCount: products.length,

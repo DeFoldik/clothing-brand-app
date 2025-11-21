@@ -8,6 +8,8 @@ import '../services/cart_service.dart';
 import '../services/firestore_service.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/product_card.dart';
+import '../models/cart_product.dart';
+import 'auth_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -182,48 +184,130 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  // screens/product_detail_screen.dart - обновим метод _addToCart
+  // screens/product_detail_screen.dart - обновленный метод
   void _addToCart() async {
+    print('🎯 НАЧАЛО: _addToCart вызван');
+
+    // Проверка авторизации
+    if (!CartService.isUserLoggedIn) {
+      print('❌ Пользователь не авторизован');
+      _showLoginRequiredDialog();
+      return;
+    }
+    print('✅ Пользователь авторизован');
+
+    // Проверка выбора размера
     if (_selectedSize == null) {
+      print('❌ Размер не выбран');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Выберите размер')),
       );
       return;
     }
+    print('✅ Выбран размер: $_selectedSize');
 
-    final color = _selectedColor ?? _productDetail!.availableColors.firstWhere(
-          (color) => color.inStock,
-      orElse: () => _productDetail!.availableColors.first,
-    );
+    // Автоматический выбор цвета если не выбран
+    ProductColor selectedColor;
+    if (_selectedColor != null) {
+      selectedColor = _selectedColor!;
+    } else {
+      // Ищем первый доступный цвет
+      final availableColor = _productDetail!.availableColors.firstWhere(
+            (color) => color.inStock,
+        orElse: () => _productDetail!.availableColors.first,
+      );
+      selectedColor = availableColor;
+    }
+    print('✅ Выбран цвет: ${selectedColor.name}');
 
-    // Проверяем доступность в Firestore
-    final firestoreProduct = await FirestoreService.getProductById(widget.product.id.toString());
-    if (firestoreProduct != null) {
-      final isAvailable = firestoreProduct.isVariantAvailable(_selectedSize!, color.name);
-      if (!isAvailable) {
+    // Проверка доступности
+    try {
+      print('🔍 Проверяем доступность в Firebase...');
+      final firestoreProduct = await FirestoreService.getProductById(widget.product.id.toString());
+
+      if (firestoreProduct != null) {
+        print('✅ Товар найден в Firebase');
+        final isAvailable = firestoreProduct.isVariantAvailable(_selectedSize!, selectedColor.name);
+        print('📦 Доступность: $isAvailable для размера $_selectedSize, цвета ${selectedColor.name}');
+
+        if (!isAvailable) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Размер $_selectedSize, цвет ${selectedColor.name} отсутствует на складе'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      } else {
+        print('❌ Товар не найден в Firebase, пропускаем проверку доступности');
+      }
+    } catch (e) {
+      print('❌ Ошибка проверки доступности: $e');
+      // Продолжаем без проверки доступности в случае ошибки
+    }
+
+    // Добавление в корзину
+    try {
+      print('🛒 Создаем CartProduct...');
+      final cartProduct = CartProduct(
+        product: widget.product,
+        size: _selectedSize!,
+        color: selectedColor.name,
+        quantity: 1,
+      );
+
+      print('📤 Добавляем в корзину через CartService...');
+      await CartService.addToCart(cartProduct);
+      print('✅ Товар успешно добавлен в корзину');
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Выбранный вариант отсутствует на складе')),
+          const SnackBar(
+            content: Text('✅ Товар добавлен в корзину'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-        return;
+      }
+    } catch (e) {
+      print('❌ Ошибка добавления в корзину: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Ошибка добавления в корзину: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
+  }
 
-    final cartProduct = CartProduct(
-      product: widget.product,
-      size: _selectedSize!,
-      color: color.name,
-      quantity: 1,
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Требуется регистрация'),
+        content: const Text('Для добавления товаров в корзину необходимо войти в систему.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AuthScreen()),
+              );
+            },
+            child: const Text('Войти'),
+          ),
+        ],
+      ),
     );
-
-    await CartService.addToCart(cartProduct);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Товар добавлен в корзину'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   void _toggleFavorite() async {
@@ -779,6 +863,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  // В том же файле найдите _buildBottomPanel и обновите
   Widget _buildBottomPanel() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -798,6 +883,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       child: SafeArea(
         child: Row(
           children: [
+            // Кнопка избранного
             Container(
               width: 50,
               height: 50,
@@ -820,9 +906,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
+
+            // Кнопка добавления в корзину
             Expanded(
               child: ElevatedButton(
-                onPressed: _addToCart,
+                onPressed: () {
+                  print('🎯 КНОПКА "В КОРЗИНУ" НАЖАТА');
+                  _addToCart();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,

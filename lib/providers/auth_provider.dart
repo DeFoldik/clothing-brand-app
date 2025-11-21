@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_user.dart';
+import '../services/favorite_service.dart';
 
 class AuthProvider with ChangeNotifier {
   AppUser? _user;
@@ -199,6 +200,11 @@ class AuthProvider with ChangeNotifier {
 
       print('✅ Вход успешен: ${userCredential.user?.email}');
 
+      // 🎯 МИГРАЦИЯ ЛАЙКОВ ПОСЛЕ УСПЕШНОГО ВХОДА
+      if (userCredential.user != null) {
+        await FavoriteService.migrateFavoritesOnLogin(userCredential.user!.uid);
+      }
+
     } on FirebaseAuthException catch (e) {
       print('❌ Ошибка входа: ${e.code} - ${e.message}');
       _error = _getAuthErrorMessage(e.code);
@@ -244,6 +250,14 @@ class AuthProvider with ChangeNotifier {
       case 'weak-password': return 'Пароль слишком слабый';
       case 'invalid-email': return 'Неверный формат email';
       default: return 'Произошла ошибка: $code';
+    }
+  }
+
+  Future<void> refreshUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await _loadUserData(user.uid);
+      notifyListeners(); // Это важно - уведомляем слушателей об изменении
     }
   }
 

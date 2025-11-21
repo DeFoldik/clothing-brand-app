@@ -239,7 +239,35 @@ class FirestoreService {
     return sorted;
   }
 
-  // services/firestore_service.dart - исправляем методы
+  static Future<List<Product>> getProductsByIds(List<int> productIds) async {
+    try {
+      if (productIds.isEmpty) return [];
+
+      print('🔍 Получаем товары по ID: $productIds');
+
+      // Получаем все товары и фильтруем по ID
+      final snapshot = await _firestore
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final allProducts = snapshot.docs.map((doc) {
+        return Product.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+
+      // Фильтруем по нужным ID
+      final filteredProducts = allProducts.where((product) {
+        return productIds.contains(product.id);
+      }).toList();
+
+      print('✅ Найдено товаров по ID: ${filteredProducts.length}');
+      return filteredProducts;
+    } catch (e) {
+      print('❌ Ошибка получения товаров по ID: $e');
+      return [];
+    }
+  }
+
 
 // 🎯 ПОИСК С СОРТИРОВКОЙ И ФИЛЬТРАЦИЕЙ
   static Stream<List<Product>> searchProductsWithFilters({
