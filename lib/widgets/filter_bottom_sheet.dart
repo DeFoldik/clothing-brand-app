@@ -1,13 +1,17 @@
-// widgets/filter_bottom_sheet.dart
+// widgets/filter_bottom_sheet.dart - обновляем для работы с реальными данными
 import 'package:flutter/material.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final Map<String, dynamic> activeFilters;
+  final List<String> availableSizes;
+  final List<String> availableColors;
   final Function(Map<String, dynamic>) onFiltersChanged;
 
   const FilterBottomSheet({
     super.key,
     required this.activeFilters,
+    required this.availableSizes,
+    required this.availableColors,
     required this.onFiltersChanged,
   });
 
@@ -17,24 +21,15 @@ class FilterBottomSheet extends StatefulWidget {
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   late Map<String, dynamic> _currentFilters;
-
-  final List<String> _availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-
-  final List<Map<String, dynamic>> _availableColors = [
-    {'name': 'Черный', 'color': Colors.black},
-    {'name': 'Белый', 'color': Colors.white},
-    {'name': 'Серый', 'color': Colors.grey},
-    {'name': 'Синий', 'color': Colors.blue},
-    {'name': 'Красный', 'color': Colors.red},
-    {'name': 'Зеленый', 'color': Colors.green},
-    {'name': 'Желтый', 'color': Colors.yellow},
-    {'name': 'Розовый', 'color': Colors.pink},
-  ];
+  late List<String> _availableSizes;
+  late List<String> _availableColors;
 
   @override
   void initState() {
     super.initState();
     _currentFilters = Map<String, dynamic>.from(widget.activeFilters);
+    _availableSizes = widget.availableSizes;
+    _availableColors = widget.availableColors;
   }
 
   @override
@@ -58,11 +53,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 onPressed: () {
                   setState(() {
                     _currentFilters = {
-                      'category': 'all',
                       'sizes': [],
                       'colors': [],
                       'priceRange': {'min': 0, 'max': 1000},
-                      'sortBy': 'popular',
                     };
                   });
                 },
@@ -168,26 +161,29 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _availableSizes.map((size) {
-            final isSelected = _currentFilters['sizes'].contains(size);
-            return FilterChip(
-              label: Text(size),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _currentFilters['sizes'].add(size);
-                  } else {
-                    _currentFilters['sizes'].remove(size);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
+        if (_availableSizes.isEmpty)
+          const Text('Нет доступных размеров', style: TextStyle(color: Colors.grey))
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _availableSizes.map((size) {
+              final isSelected = _currentFilters['sizes'].contains(size);
+              return FilterChip(
+                label: Text(size),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _currentFilters['sizes'].add(size);
+                    } else {
+                      _currentFilters['sizes'].remove(size);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
       ],
     );
   }
@@ -204,32 +200,29 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _availableColors.map((colorData) {
-            final isSelected = _currentFilters['colors'].contains(colorData['name']);
-            return FilterChip(
-              label: Text(
-                colorData['name'],
-                style: TextStyle(
-                  color: colorData['color'] == Colors.white ? Colors.black : null,
-                ),
-              ),
-              backgroundColor: colorData['color'],
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _currentFilters['colors'].add(colorData['name']);
-                  } else {
-                    _currentFilters['colors'].remove(colorData['name']);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
+        if (_availableColors.isEmpty)
+          const Text('Нет доступных цветов', style: TextStyle(color: Colors.grey))
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _availableColors.map((color) {
+              final isSelected = _currentFilters['colors'].contains(color);
+              return FilterChip(
+                label: Text(color),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _currentFilters['colors'].add(color);
+                    } else {
+                      _currentFilters['colors'].remove(color);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
       ],
     );
   }

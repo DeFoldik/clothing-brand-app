@@ -4,9 +4,7 @@ import '../models/product.dart';
 import 'package:flutter/material.dart';
 
 class ProductDetailService {
-  // В реальном приложении здесь будет запрос к API
   static Future<ProductDetail> getProductDetail(Product product) async {
-    // Заглушка с демо-данными
     await Future.delayed(const Duration(milliseconds: 500));
 
     final sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -31,11 +29,19 @@ class ProductDetailService {
       ),
     ];
 
-    final additionalImages = [
-      'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=500',
-      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500',
-      'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?w=500',
-    ];
+    // 🎯 Используем images из product или создаем демо
+    List<String> productImages;
+    if (product.images.isNotEmpty) {
+      productImages = product.images;
+    } else {
+      // Fallback: основное изображение + дополнительные
+      productImages = [
+        product.image,
+        'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=500',
+        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500',
+        'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?w=500',
+      ];
+    }
 
     return ProductDetail(
       id: product.id,
@@ -44,10 +50,10 @@ class ProductDetailService {
       discountPrice: product.price > 50 ? product.price * 0.7 : null,
       description: product.description,
       category: product.category,
-      images: [product.image, ...additionalImages],
+      images: productImages, // 🎯 Передаем images
       availableSizes: sizes.map((size) => ProductSize(
         size: size,
-        inStock: [true, false][DateTime.now().millisecond % 2], // Рандомная доступность для демо
+        inStock: [true, false][DateTime.now().millisecond % 2],
       )).toList(),
       availableColors: colors,
       specification: ProductSpecification(
@@ -67,7 +73,6 @@ class ProductDetailService {
   }
 
   static Future<void> toggleFavorite(int productId) async {
-    // Логика добавления/удаления из избранного
     await Future.delayed(const Duration(milliseconds: 200));
   }
 }

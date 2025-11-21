@@ -1,9 +1,11 @@
 // screens/search_screen.dart
 import 'package:flutter/material.dart';
+import '../services/firestore_service.dart';
 import '../models/product.dart';
+import '../models/categories.dart';
 import '../widgets/product_card.dart';
 import '../widgets/category_chip.dart';
-import '../widgets/filter_bottom_sheet.dart';
+import '../widgets/compact_filter_row.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -14,152 +16,133 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  String _selectedCategory = 'all';
+  final FocusNode _searchFocusNode = FocusNode();
 
-  // 🎯 КАТЕГОРИИ КАК ВЫ ХОТИТЕ
-  final List<Map<String, dynamic>> _categories = [
-    {'name': 'Все', 'category': 'all', 'icon': Icons.grid_view},
-    {'name': 'Верхняя одежда', 'category': 'jackets', 'iconPath': 'assets/icons/down-jacket.svg'},
-    {'name': 'Худи и толстовки', 'category': 'hoodies', 'iconPath': 'assets/icons/sweatshirt.svg'},
-    {'name': 'Футболки', 'category': 'tshirts', 'iconPath': 'assets/icons/t-shirt.svg'},
-    {'name': 'Лонгсливы', 'category': 'longsleeves', 'iconPath': 'assets/icons/longsleeve.svg'},
-    {'name': 'Шорты', 'category': 'shorts', 'iconPath': 'assets/icons/knickers.svg'},
-    {'name': 'Штаны', 'category': 'pants', 'iconPath': 'assets/icons/trousers.svg'},
-    {'name': 'Головные уборы', 'category': 'headwear', 'iconPath': 'assets/icons/beanie.svg'},
-  ];
+  String _searchQuery = '';
+  ProductCategory _selectedCategory = ProductCategory.all;
+  String _selectedSort = 'popular';
 
   // 🎯 ФИЛЬТРЫ
   Map<String, dynamic> _activeFilters = {
-    'category': 'all',
-    'sizes': [],
-    'colors': [],
-    'priceRange': {'min': 0, 'max': 1000},
-    'sortBy': 'popular',
+    'sizes': <String>[],
+    'colors': <String>[],
+    'priceRange': {'min': 0, 'max': 500},
   };
 
-  // 🎯 ЗАГЛУШКА ДЛЯ ТОВАРОВ
-  final List<Product> _allProducts = [];
-  List<Product> _searchResults = [];
+  // 🎯 ДОСТУПНЫЕ ФИЛЬТРЫ
+  List<String> _availableSizes = [];
+  List<String> _availableColors = [];
+  bool _isLoadingFilters = false;
+
+  // 🎯 КАТЕГОРИИ ДЛЯ ПОИСКА
+  final List<ProductCategory> _categories = FirestoreService.getCategories();
 
   @override
   void initState() {
     super.initState();
-    _searchResults = _allProducts;
+    _searchController.addListener(_onSearchChanged);
+    _loadAvailableFilters();
+  }
+
+  void _loadAvailableFilters() async {
+    setState(() {
+      _isLoadingFilters = true;
+    });
+
+    final filters = await FirestoreService.getAvailableFilters();
+
+    setState(() {
+      _availableSizes = filters['sizes'] ?? [];
+      _availableColors = filters['colors'] ?? [];
+      _isLoadingFilters = false;
+    });
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
   }
 
   void _performSearch() {
-    final query = _searchController.text.toLowerCase();
     setState(() {
-      _searchQuery = query;
-      _searchResults = _allProducts.where((product) {
-        final matchesSearch = product.title.toLowerCase().contains(query) ||
-            product.description.toLowerCase().contains(query);
-        final matchesCategory = _selectedCategory == 'all' ||
-            _getProductCategory(product) == _selectedCategory;
-        return matchesSearch && matchesCategory;
-      }).toList();
+      _searchQuery = _searchController.text;
     });
   }
 
-  String _getProductCategory(Product product) {
-    final title = product.title.toLowerCase();
-    if (title.contains('jacket') || title.contains('coat') || title.contains('курт') || title.contains('пальт')) return 'jackets';
-    if (title.contains('hoodie') || title.contains('sweatshirt') || title.contains('худи') || title.contains('толстов')) return 'hoodies';
-    if (title.contains('t-shirt') || title.contains('tshirt') || title.contains('футбол')) return 'tshirts';
-    if (title.contains('longsleeve') || title.contains('лонгслив')) return 'longsleeves';
-    if (title.contains('tracksuit') || title.contains('sport') || title.contains('спортив')) return 'tracksuits';
-    if (title.contains('short') || title.contains('шорт')) return 'shorts';
-    if (title.contains('pant') || title.contains('trouser') || title.contains('брюк')) return 'pants';
-    if (title.contains('cap') || title.contains('hat') || title.contains('кепк') || title.contains('шапк')) return 'headwear';
-    return 'other';
-  }
-
-  void _filterByCategory(String category) {
+  void _filterByCategory(ProductCategory category) {
     setState(() {
       _selectedCategory = category;
-      _activeFilters['category'] = category;
-      _performSearch();
     });
   }
 
-  void _openFilters() async {
-    final result = await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => FilterBottomSheet(
-        activeFilters: _activeFilters,
-        onFiltersChanged: (newFilters) {
-          setState(() {
-            _activeFilters = newFilters;
-            _applyFilters();
-          });
-        },
-      ),
-    );
-  }
-
-  void _applyFilters() {
-    _performSearch();
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _selectedCategory = ProductCategory.all;
+      _selectedSort = 'popular';
+      _activeFilters = {
+        'sizes': <String>[],
+        'colors': <String>[],
+        'priceRange': {'min': 0, 'max': 500},
+      };
+    });
   }
 
   void _sortProducts(String sortBy) {
     setState(() {
-      _activeFilters['sortBy'] = sortBy;
-      switch (sortBy) {
-        case 'price_low':
-          _searchResults.sort((a, b) => a.price.compareTo(b.price));
-          break;
-        case 'price_high':
-          _searchResults.sort((a, b) => b.price.compareTo(a.price));
-          break;
-        case 'newest':
-          _searchResults.shuffle();
-          break;
-        case 'popular':
-        default:
-          break;
-      }
+      _selectedSort = sortBy;
     });
+  }
+
+  // 🎯 ПОЛУЧЕНИЕ STREAM С ФИЛЬТРАМИ И СОРТИРОВКОЙ
+  Stream<List<Product>> get _productsStream {
+    // БЕЗОПАСНОЕ ПРИВЕДЕНИЕ ТИПОВ ДЛЯ ФИЛЬТРОВ
+    final sizes = _activeFilters['sizes'] is List<String>
+        ? _activeFilters['sizes'] as List<String>
+        : (_activeFilters['sizes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    final colors = _activeFilters['colors'] is List<String>
+        ? _activeFilters['colors'] as List<String>
+        : (_activeFilters['colors'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    final priceRange = _activeFilters['priceRange'] as Map<String, dynamic>? ?? {'min': 0, 'max': 500};
+
+    return FirestoreService.searchProductsWithFilters(
+      searchQuery: _searchQuery,
+      category: _selectedCategory,
+      sizes: sizes,
+      colors: colors,
+      minPrice: (priceRange['min'] ?? 0).toDouble(),
+      maxPrice: (priceRange['max'] ?? 500).toDouble(),
+      sortBy: _selectedSort,
+    );
+  }
+
+  bool get _hasActiveSearch {
+    return _searchQuery.isNotEmpty ||
+        !_selectedCategory.isAll ||
+        _activeFilters['sizes'].isNotEmpty ||
+        _activeFilters['colors'].isNotEmpty ||
+        _activeFilters['priceRange']['min'] > 0 ||
+        _activeFilters['priceRange']['max'] < 500;
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasActiveFilters = _activeFilters['sizes'].isNotEmpty ||
-        _activeFilters['colors'].isNotEmpty ||
-        _activeFilters['priceRange']['min'] > 0 ||
-        _activeFilters['priceRange']['max'] < 1000;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Поиск'),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            onPressed: _openFilters,
-            icon: Stack(
-              children: [
-                const Icon(Icons.filter_list),
-                if (hasActiveFilters)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 12,
-                        minHeight: 12,
-                      ),
-                    ),
-                  ),
-              ],
+          if (_hasActiveSearch)
+            IconButton(
+              icon: const Icon(Icons.clear_all),
+              onPressed: _clearSearch,
+              tooltip: 'Очистить все фильтры',
             ),
-          ),
         ],
       ),
       body: Column(
@@ -169,87 +152,103 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
+              focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                hintText: 'Поиск товаров...',
+                hintText: 'Поиск по названию...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_searchQuery.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _performSearch();
-                        },
-                      ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.sort),
-                      onSelected: _sortProducts,
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'popular',
-                          child: Text('По популярности'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'price_low',
-                          child: Text('По цене (сначала дешевые)'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'price_high',
-                          child: Text('По цене (сначала дорогие)'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'newest',
-                          child: Text('По новизне'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _performSearch();
+                  },
+                )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
                 ),
                 filled: true,
                 fillColor: Colors.grey[100],
               ),
-              onChanged: (value) {
-                _performSearch();
-              },
+              onChanged: (value) => _performSearch(),
+              onSubmitted: (value) => _performSearch(),
             ),
           ),
 
-          // 🎯 КАТЕГОРИИ
+          // 🎯 КАТЕГОРИИ ДЛЯ БЫСТРОГО ФИЛЬТРА
           SizedBox(
-            height: 70,
+            height: 50,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final category = _categories[index];
-                final isAllCategory = category['category'] == 'all'; // Проверяем это "Все" категория
-
                 return CategoryChip(
-                  category: category,
-                  isSelected: _selectedCategory == category['category'],
-                  onTap: () => _filterByCategory(category['category'] as String),
-                  isAllCategory: isAllCategory, // Передаем флаг
+                  category: {
+                    'name': category.displayName,
+                    'category': category.toFirestore(),
+                    'isAllCategory': category.isAll,
+                  },
+                  isSelected: _selectedCategory == category,
+                  onTap: () => _filterByCategory(category),
+                  isAllCategory: category.isAll,
                 );
               },
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+
+          // 🎯 КОМПАКТНЫЕ ФИЛЬТРЫ И СОРТИРОВКА
+          CompactFilterRow(
+            activeFilters: _activeFilters,
+            availableSizes: _availableSizes,
+            availableColors: _availableColors,
+            onFiltersChanged: (newFilters) {
+              setState(() {
+                _activeFilters = newFilters;
+              });
+            },
+            selectedSort: _selectedSort,
+            onSortChanged: _sortProducts,
+          ),
+
+          const SizedBox(height: 8),
 
           // 🎯 АКТИВНЫЕ ФИЛЬТРЫ
-          if (hasActiveFilters) _buildActiveFilters(),
+          if (_hasActiveSearch) _buildActiveFilters(),
+
+          const SizedBox(height: 8),
+
+          // 🎯 ИНФОРМАЦИЯ О ВЫБРАННЫХ ФИЛЬТРАХ
+          if (_hasActiveSearch) _buildSearchInfo(),
+
+          const SizedBox(height: 8),
 
           // 🎯 РЕЗУЛЬТАТЫ ПОИСКА
           Expanded(
-            child: _searchResults.isEmpty
-                ? _buildEmptyState()
-                : _buildSearchResults(),
+            child: StreamBuilder<List<Product>>(
+              stream: _productsStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingState();
+                }
+
+                if (snapshot.hasError) {
+                  return _buildErrorState(snapshot.error.toString());
+                }
+
+                final products = snapshot.data ?? [];
+
+                if (products.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return _buildSearchResults(products);
+              },
+            ),
           ),
         ],
       ),
@@ -258,18 +257,34 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildActiveFilters() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Wrap(
         spacing: 8,
-        runSpacing: 8,
+        runSpacing: 4,
         children: [
+          if (_searchQuery.isNotEmpty)
+            _buildFilterChip(
+              'Поиск: "$_searchQuery"',
+              onRemove: () {
+                _searchController.clear();
+                _performSearch();
+              },
+            ),
+          if (!_selectedCategory.isAll)
+            _buildFilterChip(
+              'Категория: ${_selectedCategory.displayName}',
+              onRemove: () {
+                setState(() {
+                  _selectedCategory = ProductCategory.all;
+                });
+              },
+            ),
           if (_activeFilters['sizes'].isNotEmpty)
             ..._activeFilters['sizes'].map<Widget>((size) => _buildFilterChip(
               'Размер: $size',
               onRemove: () {
                 setState(() {
                   _activeFilters['sizes'].remove(size);
-                  _applyFilters();
                 });
               },
             )),
@@ -279,20 +294,68 @@ class _SearchScreenState extends State<SearchScreen> {
               onRemove: () {
                 setState(() {
                   _activeFilters['colors'].remove(color);
-                  _applyFilters();
                 });
               },
             )),
-          if (_activeFilters['priceRange']['min'] > 0 || _activeFilters['priceRange']['max'] < 1000)
+          if (_activeFilters['priceRange']['min'] > 0 || _activeFilters['priceRange']['max'] < 500)
             _buildFilterChip(
               'Цена: \$${_activeFilters['priceRange']['min']} - \$${_activeFilters['priceRange']['max']}',
               onRemove: () {
                 setState(() {
-                  _activeFilters['priceRange'] = {'min': 0, 'max': 1000};
-                  _applyFilters();
+                  _activeFilters['priceRange'] = {'min': 0, 'max': 500};
                 });
               },
             ),
+          if (_selectedSort != 'popular')
+            _buildFilterChip(
+              'Сортировка: ${_getSortName(_selectedSort)}',
+              onRemove: () {
+                setState(() {
+                  _selectedSort = 'popular';
+                });
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _getSortName(String sortValue) {
+    switch (sortValue) {
+      case 'price_high': return 'Сначала дорогие';
+      case 'price_low': return 'Сначала дешевые';
+      case 'newest': return 'По новизне';
+      default: return 'По популярности';
+    }
+  }
+
+  Widget _buildSearchInfo() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          StreamBuilder<List<Product>>(
+            stream: _productsStream,
+            builder: (context, snapshot) {
+              final count = snapshot.data?.length ?? 0;
+              return Text(
+                'Найдено товаров: $count',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              );
+            },
+          ),
+          Text(
+            'Сортировка: ${_getSortName(_selectedSort)}',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
         ],
       ),
     );
@@ -304,6 +367,72 @@ class _SearchScreenState extends State<SearchScreen> {
       onDeleted: onRemove,
       backgroundColor: Colors.blue[50],
       labelStyle: const TextStyle(fontSize: 12),
+    );
+  }
+
+  Widget _buildSearchResults(List<Product> products) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.7,
+        ),
+        itemCount: products.length,
+        itemBuilder: (context, index) {
+          return ProductCard(
+            product: products[index],
+            onFavoriteChanged: () {
+              setState(() {});
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Поиск товаров...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          const Text(
+            'Ошибка загрузки',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => setState(() {}),
+            child: const Text('Попробовать снова'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -319,65 +448,22 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            _searchQuery.isEmpty ? 'Начните поиск' : 'Ничего не найдено',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
+            _hasActiveSearch
+                ? 'По вашему запросу ничего не найдено'
+                : 'Товары не найдены',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
             ),
+            textAlign: TextAlign.center,
           ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Попробуйте изменить запрос или фильтры',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          if (_hasActiveSearch)
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _searchController.clear();
-                  _activeFilters = {
-                    'category': 'all',
-                    'sizes': [],
-                    'colors': [],
-                    'priceRange': {'min': 0, 'max': 1000},
-                    'sortBy': 'popular',
-                  };
-                  _selectedCategory = 'all';
-                  _performSearch();
-                });
-              },
-              child: const Text('Сбросить фильтры'),
+              onPressed: _clearSearch,
+              child: const Text('Показать все товары'),
             ),
-          ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildSearchResults() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.7,
-        ),
-        itemCount: _searchResults.length,
-        itemBuilder: (context, index) {
-          return ProductCard(
-            product: _searchResults[index],
-            onFavoriteChanged: () {
-              // Обновляем поиск при изменении избранного
-              _performSearch();
-            },
-          );
-        },
       ),
     );
   }
@@ -385,6 +471,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 }

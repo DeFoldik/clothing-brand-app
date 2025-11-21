@@ -1,6 +1,8 @@
+// screens/home_screen.dart
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../services/firestore_service.dart';
 import '../models/product.dart';
+import '../models/categories.dart';
 import '../widgets/product_card.dart';
 import '../widgets/event_banner.dart';
 
@@ -12,10 +14,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Product> _products = [];
-  bool _isLoading = true;
-  String _error = '';
-
   // 🎯 БАННЕРЫ ИВЕНТОВ
   final List<Map<String, dynamic>> _eventBanners = [
     {
@@ -36,105 +34,65 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _loadProducts();
-  }
-
-  Future<void> _loadProducts() async {
-    try {
-      final products = await ApiService.getProducts();
-      setState(() {
-        _products = products;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  // 🎯 САМЫЕ ПОПУЛЯРНЫЕ (первые 4)
-  List<Product> get _popularProducts {
-    return _products.take(4).toList();
-  }
-
-  // 🎯 ПОСЛЕДНЯЯ КОЛЛЕКЦИЯ (следующие 4)
-  List<Product> get _latestCollection {
-    return _products.skip(4).take(4).toList();
-  }
-
-  // 🎯 ТОВАРЫ СО СКИДКОЙ (дорогие товары как "премиум")
-  List<Product> get _discountedProducts {
-    if (_products.isEmpty) return [];
-    final sorted = List<Product>.from(_products);
-    sorted.sort((a, b) => b.price.compareTo(a.price));
-    return sorted.take(4).toList();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _isLoading
-          ? _buildLoadingScreen()
-          : _error.isNotEmpty
-          ? _buildErrorScreen()
-          : _buildHomeScreen(),
-    );
-  }
-
-  Widget _buildHomeScreen() {
-    return CustomScrollView(
-      slivers: [
-        // 🎯 APP BAR
-        const SliverAppBar(
-          title: Text('Fashion Store'),
-          floating: true,
-          snap: true,
-          backgroundColor: Colors.white,
-          elevation: 0,
-        ),
-
-        SliverToBoxAdapter(
-          child: EventBanner(
-            banners: _eventBanners,
-            height: 300,
+      body: CustomScrollView(
+        slivers: [
+          // 🎯 APP BAR
+          const SliverAppBar(
+            title: Text('Fashion Store'),
+            floating: true,
+            snap: true,
+            backgroundColor: Colors.white,
+            elevation: 0,
           ),
-        ),
 
-        // 🎯 СЕКЦИЯ: САМЫЕ ПОПУЛЯРНЫЕ
-        _buildProductSection(
-          title: '🔥 Самые популярные',
-          subtitle: 'То, что выбирают наши клиенты',
-          products: _popularProducts,
-        ),
+          // 🎯 БАННЕРЫ
+          SliverToBoxAdapter(
+            child: EventBanner(
+              banners: _eventBanners,
+              height: 300,
+            ),
+          ),
 
-        // 🎯 СЕКЦИЯ: ПОСЛЕДНЯЯ КОЛЛЕКЦИЯ
-        _buildProductSection(
-          title: '🆕 Последняя коллекция',
-          subtitle: 'Самые свежие поступления',
-          products: _latestCollection,
-        ),
+          // 🎯 СЕКЦИЯ: САМЫЕ ПОПУЛЯРНЫЕ
+          _buildProductSectionStream(
+            title: '🔥 Самые популярные',
+            subtitle: 'То, что выбирают наши клиенты',
+            stream: FirestoreService.getPopularProducts(),
+          ),
 
-        // 🎯 СЕКЦИЯ: ТОВАРЫ СО СКИДКОЙ
-        _buildProductSection(
-          title: '💰 Товары со скидкой',
-          subtitle: 'Особые предложения этой недели',
-          products: _discountedProducts,
-        ),
-      ],
+          // 🎯 СЕКЦИЯ: НОВИНКИ
+          _buildProductSectionStream(
+            title: '🆕 Новинки',
+            subtitle: 'Самые свежие поступления',
+            stream: FirestoreService.getNewProducts(),
+          ),
+
+          // 🎯 СЕКЦИЯ: ТОВАРЫ СО СКИДКОЙ
+          _buildProductSectionStream(
+            title: '💰 Товары со скидкой',
+            subtitle: 'Особые предложения этой недели',
+            stream: FirestoreService.getDiscountedProducts(),
+          ),
+
+          // 🎯 СЕКЦИЯ: КАТЕГОРИИ
+          _buildCategoriesSection(),
+
+          // 🎯 СЕКЦИЯ: ВСЕ ТОВАРЫ
+          _buildProductSectionStream(
+            title: '🛍️ Все товары',
+            subtitle: 'Полный ассортимент магазина',
+            stream: FirestoreService.getProductsStream(),
+          ),
+        ],
+      ),
     );
   }
 
-  // 🎯 УНИВЕРСАЛЬНАЯ СЕКЦИЯ ТОВАРОВ
-  Widget _buildProductSection({
-    required String title,
-    required String subtitle,
-    required List<Product> products,
-  }) {
-    if (products.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+  // 🎯 СЕКЦИЯ КАТЕГОРИЙ
+  Widget _buildCategoriesSection() {
+    final categories = FirestoreService.getCategories();
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -142,7 +100,93 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ЗАГОЛОВОК СЕКЦИИ
+            const Text(
+              'Категории',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Выберите интересующую категорию',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ГРИД КАТЕГОРИЙ
+            GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.2,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                return _buildCategoryCard(category);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🎯 КАРТОЧКА КАТЕГОРИИ
+  Widget _buildCategoryCard(ProductCategory category) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: () {
+          // TODO: Переход на экран категории
+          print('Выбрана категория: ${category.displayName}');
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // TODO: Добавить иконки для категорий
+            Icon(
+              Icons.category,
+              size: 32,
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              category.displayName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🎯 УНИВЕРСАЛЬНАЯ СЕКЦИЯ ТОВАРОВ С STREAM
+  Widget _buildProductSectionStream({
+    required String title,
+    required String subtitle,
+    required Stream<List<Product>> stream,
+  }) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
               title,
               style: const TextStyle(
@@ -160,25 +204,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // СЕТКА ТОВАРОВ 2x2
-            GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.7,
-              ),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                return ProductCard(
-                  product: products[index],
-                  onFavoriteChanged: () {
-                    // При изменении избранного можно обновить список если нужно
-                    setState(() {});
-                  },
-                );
+            StreamBuilder<List<Product>>(
+              stream: stream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingGrid();
+                }
+
+                if (snapshot.hasError) {
+                  print('❌ Ошибка в секции "$title": ${snapshot.error}');
+                  return _buildErrorSection(snapshot.error.toString());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _buildEmptySection(title);
+                }
+
+                final products = snapshot.data!;
+                return _buildProductsGrid(products);
               },
             ),
           ],
@@ -187,15 +230,123 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildLoadingScreen() {
-    return const Center(
-      child: CircularProgressIndicator(),
+  // 🎯 СЕТКА ТОВАРОВ
+  Widget _buildProductsGrid(List<Product> products) {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.7,
+      ),
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        return ProductCard(
+          product: products[index],
+          onFavoriteChanged: () {
+            setState(() {});
+          },
+        );
+      },
     );
   }
 
-  Widget _buildErrorScreen() {
-    return Center(
-      child: Text('Ошибка: $_error'),
+  // 🎯 ЗАГРУЗКА
+  Widget _buildLoadingGrid() {
+    return SizedBox(
+      height: 300,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Загрузка товаров...',
+              style: TextStyle(
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🎯 ПУСТАЯ СЕКЦИЯ
+  Widget _buildEmptySection(String sectionName) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 32,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'В разделе "$sectionName" пока нет товаров',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🎯 ОШИБКА
+  Widget _buildErrorSection(String error) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red[200]!),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 32,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Ошибка загрузки',
+              style: TextStyle(
+                color: Colors.red[700],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Проверьте подключение к интернету',
+              style: TextStyle(
+                color: Colors.red[600],
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

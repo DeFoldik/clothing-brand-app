@@ -26,11 +26,12 @@ class _ProductCardState extends State<ProductCard> {
   final PageController _pageController = PageController();
 
   List<String> get _productImages {
-    return [
-      widget.product.image,
-      'https://via.placeholder.com/300/FF0000/FFFFFF?text=Image+2',
-      'https://via.placeholder.com/300/0000FF/FFFFFF?text=Image+3',
-    ];
+    // Если у товара есть дополнительные изображения, используем их
+    if (widget.product.images != null && widget.product.images!.isNotEmpty) {
+      return widget.product.images!.take(10).toList(); // Максимум 10 фото
+    }
+    // Иначе используем основное изображение
+    return [widget.product.image];
   }
 
   @override
@@ -325,81 +326,81 @@ class _ProductCardState extends State<ProductCard> {
         );
       },
       child: Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[300],
-            borderRadius: BorderRadius.circular(16),
-          ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // БЛОК С ИЗОБРАЖЕНИЕМ
-          Stack(
-            children: [
-              // PAGE VIEW ДЛЯ СВАЙПА
-              Container(
-                height: 160,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // БЛОК С ИЗОБРАЖЕНИЕМ
+            Stack(
+              children: [
+                // PAGE VIEW ДЛЯ СВАЙПА
+                Container(
+                  height: 163,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
                   ),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: _productImages.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentImageIndex = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return CachedNetworkImage(
-                        imageUrl: _productImages[index],
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[300],
-                          child: const Center(
-                            child: CircularProgressIndicator(),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _productImages.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentImageIndex = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return CachedNetworkImage(
+                          imageUrl: _productImages[index],
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                           ),
-                        ),
-                        errorWidget: (context, url, error) =>
-                        const Icon(Icons.error),
-                      );
-                    },
+                          errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
 
               // индикатор точек
-              if (hasMultipleImages)
-                Positioned(
-                  bottom: 8,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _productImages.length,
-                          (index) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: _currentImageIndex == index ? 9 : 6,
-                        height: _currentImageIndex == index ? 9 : 6,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.rectangle,
-                          borderRadius: BorderRadius.circular(3),
-                          color: _currentImageIndex == index
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.5),
+                if (hasMultipleImages)
+                  Positioned(
+                    bottom: 8,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        _productImages.length, // 🎯 Теперь реальное количество
+                            (index) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: _currentImageIndex == index ? 9 : 6,
+                          height: _currentImageIndex == index ? 9 : 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(3),
+                            color: _currentImageIndex == index
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.5),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
               // 🎯 КНОПКА ИЗБРАННОГО
               Positioned(
@@ -418,28 +419,6 @@ class _ProductCardState extends State<ProductCard> {
                       _isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: _isFavorite ? Colors.red : Colors.black54,
                       size: 20,
-                    ),
-                  ),
-                ),
-              ),
-
-              // 🎯 КНОПКА КОРЗИНЫ
-              Positioned(
-                bottom: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: _showAddToCartDialog,
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: Colors.black54,
-                      size: 18,
                     ),
                   ),
                 ),

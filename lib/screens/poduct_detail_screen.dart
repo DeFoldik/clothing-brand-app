@@ -5,8 +5,9 @@ import '../models/product_detail.dart';
 import '../services/product_detail_service.dart';
 import '../services/favorite_service.dart';
 import '../services/cart_service.dart';
+import '../services/firestore_service.dart';
 import '../widgets/image_viewer.dart';
-import '../widgets/product_card.dart'; // 🆕 Для похожих товаров
+import '../widgets/product_card.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -26,12 +27,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final PageController _imagePageController = PageController();
   final ScrollController _scrollController = ScrollController();
   bool _showAppBarTitle = false;
-  List<Product> _similarProducts = []; // 🆕 Похожие товары
+  List<Product> _similarProducts = [];
+  bool _isLoadingSimilar = true;
 
   @override
   void initState() {
     super.initState();
-    _productDetailFuture = ProductDetailService.getProductDetail(widget.product);
+    _productDetailFuture = _loadProductDetail();
     _loadSimilarProducts();
 
     _scrollController.addListener(() {
@@ -41,19 +43,118 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
   }
 
+  Future<ProductDetail> _loadProductDetail() async {
+    try {
+      // Сначала пробуем загрузить из Firestore
+      final firestoreProduct = await FirestoreService.getProductById(widget.product.id.toString());
+
+      if (firestoreProduct != null) {
+        // Используем данные из Firestore
+        return ProductDetail(
+          id: firestoreProduct.id,
+          title: firestoreProduct.title,
+          price: firestoreProduct.price,
+          description: firestoreProduct.description,
+          category: firestoreProduct.category,
+          images: [firestoreProduct.image],
+          availableSizes: firestoreProduct.sizes.map((size) => ProductSize(
+            size: size,
+            inStock: firestoreProduct.isVariantAvailable(size, _getDefaultColor(firestoreProduct)),
+          )).toList(),
+          availableColors: firestoreProduct.colors.map((color) => ProductColor(
+            name: color,
+            color: _getColorFromName(color),
+            imageUrl: firestoreProduct.image,
+            inStock: firestoreProduct.isVariantAvailable(_getDefaultSize(firestoreProduct), color),
+          )).toList(),
+          specification: ProductSpecification(
+            material: 'Хлопок 80%, Полиэстер 20%',
+            care: 'Стирка при 30°C, не отбеливать',
+            season: 'Круглогодичный',
+          ),
+          discountPrice: firestoreProduct.discountPrice,
+          rating: 4.5,
+          reviewCount: 128,
+          isNew: firestoreProduct.isNew,
+          sizeChartImage: 'https://via.placeholder.com/400x600/FFFFFF/000000?text=Size+Chart',
+        );
+      } else {
+        // Fallback на старый сервис
+        return ProductDetailService.getProductDetail(widget.product);
+      }
+    } catch (e) {
+      print('❌ Ошибка загрузки деталей товара: $e');
+      // Fallback на старый сервис при ошибке
+      return ProductDetailService.getProductDetail(widget.product);
+    }
+  }
+
+  String _getDefaultSize(Product product) {
+    return product.sizes.isNotEmpty ? product.sizes.first : 'M';
+  }
+
+  String _getDefaultColor(Product product) {
+    return product.colors.isNotEmpty ? product.colors.first : 'Черный';
+  }
+
+  Color _getColorFromName(String colorName) {
+    switch (colorName.toLowerCase()) {
+      case 'черный':
+        return Colors.black;
+      case 'белый':
+        return Colors.white;
+      case 'серый':
+        return Colors.grey;
+      case 'синий':
+        return Colors.blue;
+      case 'красный':
+        return Colors.red;
+      case 'зеленый':
+        return Colors.green;
+      case 'желтый':
+        return Colors.yellow;
+      case 'розовый':
+        return Colors.pink;
+      default:
+        return Colors.black;
+    }
+  }
+
+  List<String> get _productImages {
+    if (_productDetail != null) {
+      return _productDetail!.images.take(10).toList(); // Максимум 10 фото
+    }
+    // Fallback: используем изображения из product
+    if (widget.product.images.isNotEmpty) {
+      return widget.product.images.take(10).toList();
+    }
+    return [widget.product.image];
+  }
+
   Future<void> _loadSimilarProducts() async {
-    // 🆕 Заглушка для похожих товаров
-    await Future.delayed(const Duration(milliseconds: 300));
-    setState(() {
-      _similarProducts = List.generate(4, (index) => Product(
-        id: index + 100,
-        title: 'Похожий товар ${index + 1}',
-        price: widget.product.price + (index * 10).toDouble(),
-        description: 'Описание похожего товара',
-        category: widget.product.category,
-        image: 'https://via.placeholder.com/300/FFFFFF/000000?text=Similar+${index + 1}',
-      ));
-    });
+    try {
+      setState(() {
+        _isLoadingSimilar = true;
+      });
+
+      // Загружаем товары из той же категории
+      final allProducts = await FirestoreService.getProductsStream().first;
+      final similar = allProducts
+          .where((p) => p.category == widget.product.category && p.id != widget.product.id)
+          .take(4)
+          .toList();
+
+      setState(() {
+        _similarProducts = similar;
+        _isLoadingSimilar = false;
+      });
+    } catch (e) {
+      print('❌ Ошибка загрузки похожих товаров: $e');
+      setState(() {
+        _isLoadingSimilar = false;
+        _similarProducts = [];
+      });
+    }
   }
 
   void _onImageSelected(int index) {
@@ -94,6 +195,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       orElse: () => _productDetail!.availableColors.first,
     );
 
+    // Проверяем доступность в Firestore
+    final firestoreProduct = await FirestoreService.getProductById(widget.product.id.toString());
+    if (firestoreProduct != null) {
+      final isAvailable = firestoreProduct.isVariantAvailable(_selectedSize!, color.name);
+      if (!isAvailable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Выбранный вариант отсутствует на складе')),
+        );
+        return;
+      }
+    }
+
     final cartProduct = CartProduct(
       product: widget.product,
       size: _selectedSize!,
@@ -115,7 +228,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _toggleFavorite() async {
     if (_productDetail != null) {
-      // 🆕 Исправленная логика избранного
       await FavoriteService.toggleFavorite(_productDetail!.id);
 
       if (mounted) {
@@ -123,7 +235,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           // Обновляем локальное состояние
         });
         // Перезагружаем данные товара
-        _productDetailFuture = ProductDetailService.getProductDetail(widget.product);
+        _productDetailFuture = _loadProductDetail();
         setState(() {});
       }
     }
@@ -141,7 +253,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // 🆕 Функция для показа таблицы размеров
   void _showSizeChart() {
     if (_productDetail?.sizeChartImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -208,10 +319,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
           _productDetail = snapshot.data!;
 
+          // Автоматически выбираем первый доступный размер и цвет
+          if (_selectedSize == null && _productDetail!.availableSizes.isNotEmpty) {
+            final availableSize = _productDetail!.availableSizes.firstWhere(
+                  (size) => size.inStock,
+              orElse: () => _productDetail!.availableSizes.first,
+            );
+            _selectedSize = availableSize.size;
+          }
+
+          if (_selectedColor == null && _productDetail!.availableColors.isNotEmpty) {
+            final availableColor = _productDetail!.availableColors.firstWhere(
+                  (color) => color.inStock,
+              orElse: () => _productDetail!.availableColors.first,
+            );
+            _selectedColor = availableColor;
+          }
+
           return CustomScrollView(
             controller: _scrollController,
             slivers: [
-              // АППБАР (УБРАЛИ КНОПКИ ПОДЕЛИТЬСЯ И ЛАЙК)
               SliverAppBar(
                 title: _showAppBarTitle ? Text(_productDetail!.title) : null,
                 backgroundColor: Colors.white,
@@ -229,26 +356,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
-                // 🆕 УБРАЛИ actions (кнопки поделиться и лайк)
               ),
 
-              // ОСНОВНОЙ КОНТЕНТ
               SliverList(
                 delegate: SliverChildListDelegate([
-                  // ГАЛЕРЕЯ ИЗОБРАЖЕНИЙ
                   _buildImageGallery(),
-
-                  // ИНФОРМАЦИЯ О ТОВАРЕ
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ЦЕНА И СКИДКА
                         _buildPriceSection(),
                         const SizedBox(height: 8),
-
-                        // НАЗВАНИЕ
                         Text(
                           _productDetail!.title,
                           style: const TextStyle(
@@ -257,27 +376,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // ВЫБОР ЦВЕТА
                         if (_productDetail!.availableColors.isNotEmpty)
                           _buildColorSelector(),
                         const SizedBox(height: 16),
-
-                        // ВЫБОР РАЗМЕРА
                         _buildSizeSelector(),
                         const SizedBox(height: 16),
-
-                        // ОПИСАНИЕ
                         _buildDescription(),
                         const SizedBox(height: 16),
-
-                        // ХАРАКТЕРИСТИКИ
                         _buildSpecifications(),
                         const SizedBox(height: 24),
-
-                        // 🆕 ПОХОЖИЕ ТОВАРЫ
                         _buildSimilarProducts(),
-                        const SizedBox(height: 80), // Отступ для нижней панели
+                        const SizedBox(height: 80),
                       ],
                     ),
                   ),
@@ -287,8 +396,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           );
         },
       ),
-
-      // НИЖНЯЯ ПАНЕЛЬ С КНОПКАМИ (УБРАЛИ КНОПКУ КУПИТЬ СЕЙЧАС)
       bottomNavigationBar: _productDetail != null ? _buildBottomPanel() : null,
     );
   }
@@ -300,7 +407,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       height: 400,
       child: Stack(
         children: [
-          // ОСНОВНОЕ ИЗОБРАЖЕНИЕ
           PageView.builder(
             controller: _imagePageController,
             itemCount: images.length,
@@ -320,8 +426,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               );
             },
           ),
-
-          // ИНДИКАТОРЫ
           if (images.length > 1)
             Positioned(
               bottom: 16,
@@ -344,8 +448,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 }),
               ),
             ),
-
-          // БЭДЖ НОВИНКИ
           if (_productDetail?.isNew == true)
             Positioned(
               top: 16,
@@ -366,8 +468,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
             ),
-
-          // 🆕 БЭДЖ СКИДКИ
           if (_productDetail!.hasDiscount)
             Positioned(
               top: 16,
@@ -512,7 +612,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             TextButton(
-              onPressed: _showSizeChart, // 🆕 Функциональная кнопка таблицы размеров
+              onPressed: _showSizeChart,
               child: const Text('Таблица размеров'),
             ),
           ],
@@ -638,8 +738,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // 🆕 ВИДЖЕТ ПОХОЖИХ ТОВАРОВ
   Widget _buildSimilarProducts() {
+    if (_isLoadingSimilar) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (_similarProducts.isEmpty) return const SizedBox();
 
     return Column(
@@ -695,7 +798,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            // КНОПКА ИЗБРАННОГО (ИСПРАВЛЕННАЯ)
             Container(
               width: 50,
               height: 50,
@@ -718,8 +820,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
-
-            // КНОПКА В КОРЗИНУ (РАСШИРЕННАЯ)
             Expanded(
               child: ElevatedButton(
                 onPressed: _addToCart,
