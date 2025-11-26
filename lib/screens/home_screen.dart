@@ -26,11 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Распродажа до 50%',
       'subtitle': 'Успей до конца недели',
     },
-    {
-      'image': 'https://images.unsplash.com/photo-1601924582970-9238bcb495d9?w=500',
-      'title': 'Бестселлеры',
-      'subtitle': 'То, что выбирают другие',
-    },
   ];
 
   @override

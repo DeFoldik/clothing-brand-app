@@ -1,5 +1,5 @@
-// models/app_user.dart
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum UserRole { guest, user, admin }
 
@@ -10,6 +10,7 @@ class AppUser {
   final String? phone;
   final UserRole role;
   final DateTime? createdAt;
+  final bool isActive;
 
   AppUser({
     required this.uid,
@@ -18,21 +19,46 @@ class AppUser {
     this.phone,
     required this.role,
     this.createdAt,
+    this.isActive = true,
   });
 
-  // Исправленный конструктор
+  // Конструктор из Firebase Auth + Firestore Data
   factory AppUser.fromFirebaseAuth(User firebaseUser, Map<String, dynamic>? data) {
     return AppUser(
       uid: firebaseUser.uid,
       email: firebaseUser.email ?? '',
-      name: data?['name'] ?? firebaseUser.displayName, // displayName может быть null
+      name: data?['name'] ?? firebaseUser.displayName,
       phone: data?['phone'] ?? firebaseUser.phoneNumber,
-      role: UserRole.values.firstWhere(
-            (e) => e.toString() == 'UserRole.${data?['role'] ?? 'user'}',
-        orElse: () => UserRole.user,
-      ),
+      role: _parseUserRole(data?['role'] ?? 'user'),
       createdAt: data?['createdAt']?.toDate(),
+      isActive: data?['isActive'] ?? true,
     );
+  }
+
+  // 🆕 Конструктор из DocumentSnapshot (для админ-панели)
+  factory AppUser.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return AppUser(
+      uid: doc.id,
+      email: data['email'] ?? '',
+      name: data['name'],
+      phone: data['phone'],
+      role: _parseUserRole(data['role'] ?? 'user'),
+      createdAt: data['createdAt']?.toDate(),
+      isActive: data['isActive'] ?? true,
+    );
+  }
+
+  static UserRole _parseUserRole(String roleString) {
+    switch (roleString) {
+      case 'admin':
+        return UserRole.admin;
+      case 'guest':
+        return UserRole.guest;
+      case 'user':
+      default:
+        return UserRole.user;
+    }
   }
 
   factory AppUser.guest() {
@@ -40,6 +66,7 @@ class AppUser {
       uid: 'guest',
       email: 'guest',
       role: UserRole.guest,
+      isActive: false,
     );
   }
 
@@ -52,14 +79,46 @@ class AppUser {
       'email': email,
       'name': name,
       'phone': phone,
-      'role': role.toString().split('.').last,
+      'role': _roleToString(role),
+      'isActive': isActive,
       'createdAt': createdAt?.millisecondsSinceEpoch,
     };
   }
 
-  @override
-  String toString() {
-    return 'AppUser{uid: $uid, email: $email, name: $name, role: $role, isAdmin: $isAdmin}';
+  String _roleToString(UserRole role) {
+    switch (role) {
+      case UserRole.admin:
+        return 'admin';
+      case UserRole.guest:
+        return 'guest';
+      case UserRole.user:
+      default:
+        return 'user';
+    }
   }
 
+  AppUser copyWith({
+    String? uid,
+    String? email,
+    String? name,
+    String? phone,
+    UserRole? role,
+    DateTime? createdAt,
+    bool? isActive,
+  }) {
+    return AppUser(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      createdAt: createdAt ?? this.createdAt,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'AppUser{uid: $uid, email: $email, name: $name, role: $role, isAdmin: $isAdmin, isActive: $isActive}';
+  }
 }

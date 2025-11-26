@@ -215,25 +215,10 @@ class ProfileScreen extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _buildAdminChip(
-                  'Товары',
-                  Icons.shopping_cart,
+                  'Просмотр',
+                  Icons.remove_red_eye_sharp,
                       () => _navigateToAdminPanel(context, 'products'),
-                ),
-                _buildAdminChip(
-                  'Категории',
-                  Icons.category,
-                      () => _navigateToAdminPanel(context, 'categories'),
-                ),
-                _buildAdminChip(
-                  'Ивенты',
-                  Icons.event,
-                      () => _navigateToAdminPanel(context, 'events'),
-                ),
-                _buildAdminChip(
-                  'Заказы',
-                  Icons.list_alt,
-                      () => _navigateToAdminPanel(context, 'orders'),
-                ),
+                )
               ],
             ),
           ],
@@ -255,7 +240,7 @@ class ProfileScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AdminPanelScreen(initialSection: section),
+        builder: (context) => const AdminPanelScreen(),
       ),
     );
   }

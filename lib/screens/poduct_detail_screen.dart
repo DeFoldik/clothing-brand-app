@@ -695,10 +695,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton(
+            /*TextButton(
               onPressed: _showSizeChart,
               child: const Text('Таблица размеров'),
-            ),
+            ),*/
           ],
         ),
         const SizedBox(height: 8),

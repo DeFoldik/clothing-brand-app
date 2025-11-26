@@ -3,7 +3,7 @@ class ProductVariant {
   final String size;
   final String color;
   final int stock;
-  final String? sku; // Артикул варианта (опционально)
+  final String? sku;
 
   ProductVariant({
     required this.size,
@@ -40,6 +40,19 @@ class ProductVariant {
         other.color == color;
   }
 
+  ProductVariant copyWith({
+    String? size,
+    String? color,
+    int? stock,
+    String? sku,
+  }) {
+    return ProductVariant(
+      size: size ?? this.size,
+      color: color ?? this.color,
+      stock: stock ?? this.stock,
+      sku: sku ?? this.sku,
+    );
+  }
   @override
   int get hashCode => Object.hash(size, color);
 }

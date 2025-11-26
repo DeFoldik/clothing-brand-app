@@ -254,7 +254,7 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
-
+// В search_screen.dart - обнови метод _buildActiveFilters
   Widget _buildActiveFilters() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -279,7 +279,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 });
               },
             ),
-          if (_activeFilters['sizes'].isNotEmpty)
+          if (_activeFilters['sizes'] != null && _activeFilters['sizes'].isNotEmpty)
             ..._activeFilters['sizes'].map<Widget>((size) => _buildFilterChip(
               'Размер: $size',
               onRemove: () {
@@ -288,7 +288,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 });
               },
             )),
-          if (_activeFilters['colors'].isNotEmpty)
+          if (_activeFilters['colors'] != null && _activeFilters['colors'].isNotEmpty)
             ..._activeFilters['colors'].map<Widget>((color) => _buildFilterChip(
               'Цвет: $color',
               onRemove: () {
@@ -297,7 +297,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 });
               },
             )),
-          if (_activeFilters['priceRange']['min'] > 0 || _activeFilters['priceRange']['max'] < 500)
+          if (_activeFilters['priceRange'] != null &&
+              (_activeFilters['priceRange']['min'] > 0 || _activeFilters['priceRange']['max'] < 500))
             _buildFilterChip(
               'Цена: \$${_activeFilters['priceRange']['min']} - \$${_activeFilters['priceRange']['max']}',
               onRemove: () {

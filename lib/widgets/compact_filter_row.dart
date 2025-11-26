@@ -38,12 +38,36 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
     'Коричневый': Colors.brown,
   };
 
+  late Map<String, dynamic> _currentFilters;
+  late String _currentSort;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentFilters = Map<String, dynamic>.from(widget.activeFilters);
+    _currentSort = widget.selectedSort;
+  }
+
+  @override
+  void didUpdateWidget(CompactFilterRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activeFilters != widget.activeFilters) {
+      _currentFilters = Map<String, dynamic>.from(widget.activeFilters);
+    }
+    if (oldWidget.selectedSort != widget.selectedSort) {
+      _currentSort = widget.selectedSort;
+    }
+  }
+
   void _showFilterModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => _buildFilterModal(),
-    );
+    ).then((_) {
+      // После закрытия модального окна обновляем состояние
+      setState(() {});
+    });
   }
 
   void _showSortModal() {
@@ -54,62 +78,72 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
   }
 
   Widget _buildFilterModal() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      height: MediaQuery.of(context).size.height * 0.7,
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setModalState) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
             children: [
-              const Text(
-                'Фильтры',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Фильтры',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildPriceFilter(setModalState),
+                    const SizedBox(height: 20),
+                    _buildSizeFilter(setModalState),
+                    const SizedBox(height: 20),
+                    _buildColorFilter(setModalState),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _currentFilters = {
+                            'sizes': <String>[],
+                            'colors': <String>[],
+                            'priceRange': {'min': 0, 'max': 500},
+                          };
+                        });
+                        widget.onFiltersChanged(_currentFilters);
+                      },
+                      child: const Text('Сбросить'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onFiltersChanged(_currentFilters);
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Применить'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView(
-              children: [
-                _buildPriceFilter(),
-                const SizedBox(height: 20),
-                _buildSizeFilter(),
-                const SizedBox(height: 20),
-                _buildColorFilter(),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    widget.onFiltersChanged({
-                      'sizes': <String>[],
-                      'colors': <String>[],
-                      'priceRange': {'min': 0, 'max': 500},
-                    });
-                  },
-                  child: const Text('Сбросить'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Применить'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -135,14 +169,20 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
             return ListTile(
               leading: Radio<String>(
                 value: option['value']!,
-                groupValue: widget.selectedSort,
+                groupValue: _currentSort,
                 onChanged: (value) {
+                  setState(() {
+                    _currentSort = value!;
+                  });
                   widget.onSortChanged(value!);
                   Navigator.pop(context);
                 },
               ),
               title: Text(option['label']!),
               onTap: () {
+                setState(() {
+                  _currentSort = option['value']!;
+                });
                 widget.onSortChanged(option['value']!);
                 Navigator.pop(context);
               },
@@ -153,8 +193,8 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
     );
   }
 
-  Widget _buildPriceFilter() {
-    final range = widget.activeFilters['priceRange'] ?? {'min': 0, 'max': 500};
+  Widget _buildPriceFilter(StateSetter setModalState) {
+    final range = _currentFilters['priceRange'] ?? {'min': 0, 'max': 500};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,8 +204,6 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-
-        // Ручной ввод цен
         Row(
           children: [
             Expanded(
@@ -175,14 +213,14 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
+                controller: TextEditingController(text: range['min'].toString()),
                 onChanged: (value) {
                   final min = int.tryParse(value) ?? 0;
-                  widget.onFiltersChanged({
-                    ...widget.activeFilters,
-                    'priceRange': {
+                  setModalState(() {
+                    _currentFilters['priceRange'] = {
                       'min': min,
                       'max': range['max'],
-                    },
+                    };
                   });
                 },
               ),
@@ -195,14 +233,14 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
+                controller: TextEditingController(text: range['max'].toString()),
                 onChanged: (value) {
                   final max = int.tryParse(value) ?? 500;
-                  widget.onFiltersChanged({
-                    ...widget.activeFilters,
-                    'priceRange': {
+                  setModalState(() {
+                    _currentFilters['priceRange'] = {
                       'min': range['min'],
                       'max': max,
-                    },
+                    };
                   });
                 },
               ),
@@ -210,8 +248,6 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           ],
         ),
         const SizedBox(height: 16),
-
-        // Слайдер для визуального выбора
         RangeSlider(
           values: RangeValues(
             range['min'].toDouble(),
@@ -219,18 +255,17 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           ),
           min: 0,
           max: 500,
-          divisions: 50, // Шаг 10
+          divisions: 50,
           labels: RangeLabels(
             '\$${range['min']}',
             '\$${range['max']}',
           ),
           onChanged: (values) {
-            widget.onFiltersChanged({
-              ...widget.activeFilters,
-              'priceRange': {
+            setModalState(() {
+              _currentFilters['priceRange'] = {
                 'min': values.start.round(),
                 'max': values.end.round(),
-              },
+              };
             });
           },
         ),
@@ -245,7 +280,9 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
     );
   }
 
-  Widget _buildSizeFilter() {
+  Widget _buildSizeFilter(StateSetter setModalState) {
+    final currentSizes = List<String>.from(_currentFilters['sizes'] ?? []);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -258,20 +295,18 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           spacing: 8,
           runSpacing: 8,
           children: widget.availableSizes.map((size) {
-            final isSelected = (widget.activeFilters['sizes'] as List<dynamic>?)?.contains(size) ?? false;
+            final isSelected = currentSizes.contains(size);
             return FilterChip(
               label: Text(size),
               selected: isSelected,
               onSelected: (selected) {
-                final currentSizes = List<String>.from(widget.activeFilters['sizes'] ?? []);
-                if (selected) {
-                  currentSizes.add(size);
-                } else {
-                  currentSizes.remove(size);
-                }
-                widget.onFiltersChanged({
-                  ...widget.activeFilters,
-                  'sizes': currentSizes,
+                setModalState(() {
+                  if (selected) {
+                    currentSizes.add(size);
+                  } else {
+                    currentSizes.remove(size);
+                  }
+                  _currentFilters['sizes'] = currentSizes;
                 });
               },
             );
@@ -281,7 +316,9 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
     );
   }
 
-  Widget _buildColorFilter() {
+  Widget _buildColorFilter(StateSetter setModalState) {
+    final currentColors = List<String>.from(_currentFilters['colors'] ?? []);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -294,7 +331,7 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           spacing: 8,
           runSpacing: 8,
           children: widget.availableColors.map((color) {
-            final isSelected = (widget.activeFilters['colors'] as List<dynamic>?)?.contains(color) ?? false;
+            final isSelected = currentColors.contains(color);
             final colorValue = _colorMap[color] ?? Colors.grey;
 
             return FilterChip(
@@ -307,15 +344,13 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
               backgroundColor: isSelected ? colorValue : null,
               selected: isSelected,
               onSelected: (selected) {
-                final currentColors = List<String>.from(widget.activeFilters['colors'] ?? []);
-                if (selected) {
-                  currentColors.add(color);
-                } else {
-                  currentColors.remove(color);
-                }
-                widget.onFiltersChanged({
-                  ...widget.activeFilters,
-                  'colors': currentColors,
+                setModalState(() {
+                  if (selected) {
+                    currentColors.add(color);
+                  } else {
+                    currentColors.remove(color);
+                  }
+                  _currentFilters['colors'] = currentColors;
                 });
               },
             );
@@ -328,10 +363,10 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
   @override
   Widget build(BuildContext context) {
     final hasActiveFilters =
-        (widget.activeFilters['sizes'] as List?)?.isNotEmpty == true ||
-            (widget.activeFilters['colors'] as List?)?.isNotEmpty == true ||
-            (widget.activeFilters['priceRange']?['min'] ?? 0) > 0 ||
-            (widget.activeFilters['priceRange']?['max'] ?? 500) < 500;
+        (_currentFilters['sizes'] as List?)?.isNotEmpty == true ||
+            (_currentFilters['colors'] as List?)?.isNotEmpty == true ||
+            (_currentFilters['priceRange']?['min'] ?? 0) > 0 ||
+            (_currentFilters['priceRange']?['max'] ?? 500) < 500;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -340,7 +375,27 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           // Кнопка фильтров
           Expanded(
             child: OutlinedButton.icon(
-              icon: const Icon(Icons.filter_list),
+              icon: Stack(
+                children: [
+                  const Icon(Icons.filter_list),
+                  if (hasActiveFilters)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 12,
+                          minHeight: 12,
+                        ),
+                      ),
+                    )
+                ],
+              ),
               label: Text(hasActiveFilters ? 'Фильтры •' : 'Фильтры'),
               onPressed: _showFilterModal,
             ),
@@ -351,12 +406,25 @@ class _CompactFilterRowState extends State<CompactFilterRow> {
           Expanded(
             child: OutlinedButton.icon(
               icon: const Icon(Icons.sort),
-              label: const Text('Сортировка'),
+              label: Text(_getSortLabel(_currentSort)),
               onPressed: _showSortModal,
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _getSortLabel(String sortValue) {
+    switch (sortValue) {
+      case 'price_high':
+        return 'Цена ↓';
+      case 'price_low':
+        return 'Цена ↑';
+      case 'newest':
+        return 'Новинки';
+      default:
+        return 'Популярные';
+    }
   }
 }

@@ -37,57 +37,6 @@ class Product {
     this.updatedAt,
   });
 
-  // Конструктор из Firestore
-  factory Product.fromFirestore(Map<String, dynamic> data, String documentId) {
-    final variantsData = data['variants'] as List<dynamic>? ?? [];
-
-    // 🎯 Безопасное получение images
-    final imagesData = data['images'] as List<dynamic>?;
-    List<String> productImages;
-
-    if (imagesData != null && imagesData.isNotEmpty) {
-      productImages = imagesData.map((img) => img.toString()).toList();
-    } else {
-      // Если нет массива images, создаем из основного изображения
-      final mainImage = data['image'] ?? '';
-      productImages = [mainImage];
-    }
-
-    // Конвертируем строку из Firestore в enum
-    final categoryString = data['category'] ?? '';
-    final category = ProductCategory.fromFirestore(categoryString);
-
-    // Безопасное приведение типов для массивов
-    final sizesData = data['sizes'] as List<dynamic>? ?? [];
-    final colorsData = data['colors'] as List<dynamic>? ?? [];
-
-    // Пробуем конвертировать documentId в int
-    int productId;
-    try {
-      productId = int.parse(documentId);
-    } catch (e) {
-      productId = documentId.hashCode;
-    }
-
-    return Product(
-      id: productId,
-      title: data['title'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      description: data['description'] ?? '',
-      category: category,
-      image: data['image'] ?? '',
-      images: productImages, // 🎯 Передаем images
-      discountPrice: data['discountPrice']?.toDouble(),
-      isNew: data['isNew'] ?? false,
-      isPopular: data['isPopular'] ?? false,
-      sizes: sizesData.map((item) => item.toString()).toList(),
-      colors: colorsData.map((item) => item.toString()).toList(),
-      variants: variantsData.map((v) => ProductVariant.fromMap(v as Map<String, dynamic>)).toList(),
-      createdAt: data['createdAt']?.toDate(),
-      updatedAt: data['updatedAt']?.toDate(),
-    );
-  }
-
   // Для обратной совместимости с FakeStore API
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
@@ -157,4 +106,58 @@ class Product {
 
   // Получить основное изображение (для обратной совместимости)
   String get mainImage => images.isNotEmpty ? images.first : image;
+
+  factory Product.fromFirestore(Map<String, dynamic> data, String documentId) {
+    final variantsData = data['variants'] as List<dynamic>? ?? [];
+
+    // Безопасное получение images
+    final imagesData = data['images'] as List<dynamic>?;
+    List<String> productImages;
+
+    if (imagesData != null && imagesData.isNotEmpty) {
+      productImages = imagesData.map((img) => img.toString()).toList();
+    } else {
+      final mainImage = data['image'] ?? '';
+      productImages = [mainImage];
+    }
+
+    // Пробуем получить ID из данных, если нет - используем documentId
+    int productId;
+    try {
+      // Сначала пробуем получить ID из поля данных
+      if (data['id'] != null) {
+        productId = (data['id'] is int) ? data['id'] : int.parse(data['id'].toString());
+      } else {
+        // Если нет поля id, используем documentId
+        productId = int.parse(documentId);
+      }
+    } catch (e) {
+      print('⚠️ Ошибка парсинга ID: $e, documentId: $documentId');
+      productId = documentId.hashCode;
+    }
+
+    final categoryString = data['category'] ?? '';
+    final category = ProductCategory.fromFirestore(categoryString);
+
+    final sizesData = data['sizes'] as List<dynamic>? ?? [];
+    final colorsData = data['colors'] as List<dynamic>? ?? [];
+
+    return Product(
+      id: productId,
+      title: data['title'] ?? '',
+      price: (data['price'] ?? 0.0).toDouble(),
+      description: data['description'] ?? '',
+      category: category,
+      image: data['image'] ?? '',
+      images: productImages,
+      discountPrice: data['discountPrice']?.toDouble(),
+      isNew: data['isNew'] ?? false,
+      isPopular: data['isPopular'] ?? false,
+      sizes: sizesData.map((item) => item.toString()).toList(),
+      colors: colorsData.map((item) => item.toString()).toList(),
+      variants: variantsData.map((v) => ProductVariant.fromMap(v as Map<String, dynamic>)).toList(),
+      createdAt: data['createdAt']?.toDate(),
+      updatedAt: data['updatedAt']?.toDate(),
+    );
+  }
 }

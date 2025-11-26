@@ -47,12 +47,15 @@ dependencies:
   cached_network_image: ^3.3.0
   flutter_svg: ^2.0.9
 
+  image: ^4.0.17
   # Forms & Picking
   image_picker: ^1.0.4
   carousel_slider: ^4.2.1
   
   # Utilities
   intl: ^0.18.1
+
+  percent_indicator: ^4.2.2
 
 dev_dependencies:
   flutter_test:
