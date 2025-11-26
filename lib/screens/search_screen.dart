@@ -22,19 +22,19 @@ class _SearchScreenState extends State<SearchScreen> {
   ProductCategory _selectedCategory = ProductCategory.all;
   String _selectedSort = 'popular';
 
-  // 🎯 ФИЛЬТРЫ
+  //  ФИЛЬТРЫ
   Map<String, dynamic> _activeFilters = {
     'sizes': <String>[],
     'colors': <String>[],
     'priceRange': {'min': 0, 'max': 500},
   };
 
-  // 🎯 ДОСТУПНЫЕ ФИЛЬТРЫ
+  //  ДОСТУПНЫЕ ФИЛЬТРЫ
   List<String> _availableSizes = [];
   List<String> _availableColors = [];
   bool _isLoadingFilters = false;
 
-  // 🎯 КАТЕГОРИИ ДЛЯ ПОИСКА
+  //  КАТЕГОРИИ ДЛЯ ПОИСКА
   final List<ProductCategory> _categories = FirestoreService.getCategories();
 
   @override
@@ -96,7 +96,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // 🎯 ПОЛУЧЕНИЕ STREAM С ФИЛЬТРАМИ И СОРТИРОВКОЙ
+  //  ПОЛУЧЕНИЕ STREAM С ФИЛЬТРАМИ И СОРТИРОВКОЙ
   Stream<List<Product>> get _productsStream {
     // БЕЗОПАСНОЕ ПРИВЕДЕНИЕ ТИПОВ ДЛЯ ФИЛЬТРОВ
     final sizes = _activeFilters['sizes'] is List<String>
@@ -147,7 +147,7 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Column(
         children: [
-          // 🎯 ПОИСКОВАЯ СТРОКА
+          //  ПОИСКОВАЯ СТРОКА
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -176,7 +176,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
 
-          // 🎯 КАТЕГОРИИ ДЛЯ БЫСТРОГО ФИЛЬТРА
+          //  КАТЕГОРИИ ДЛЯ БЫСТРОГО ФИЛЬТРА
           SizedBox(
             height: 50,
             child: ListView.builder(
@@ -201,7 +201,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
           const SizedBox(height: 8),
 
-          // 🎯 КОМПАКТНЫЕ ФИЛЬТРЫ И СОРТИРОВКА
+          //  КОМПАКТНЫЕ ФИЛЬТРЫ И СОРТИРОВКА
           CompactFilterRow(
             activeFilters: _activeFilters,
             availableSizes: _availableSizes,
@@ -217,17 +217,17 @@ class _SearchScreenState extends State<SearchScreen> {
 
           const SizedBox(height: 8),
 
-          // 🎯 АКТИВНЫЕ ФИЛЬТРЫ
+          //  АКТИВНЫЕ ФИЛЬТРЫ
           if (_hasActiveSearch) _buildActiveFilters(),
 
           const SizedBox(height: 8),
 
-          // 🎯 ИНФОРМАЦИЯ О ВЫБРАННЫХ ФИЛЬТРАХ
+          //  ИНФОРМАЦИЯ О ВЫБРАННЫХ ФИЛЬТРАХ
           if (_hasActiveSearch) _buildSearchInfo(),
 
           const SizedBox(height: 8),
 
-          // 🎯 РЕЗУЛЬТАТЫ ПОИСКА
+          //  РЕЗУЛЬТАТЫ ПОИСКА
           Expanded(
             child: StreamBuilder<List<Product>>(
               stream: _productsStream,

@@ -23,7 +23,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   void _init() {
-    print('🎯 AuthProvider инициализирован');
+    print(' AuthProvider инициализирован');
     _user = AppUser.guest();
     notifyListeners();
 
@@ -39,12 +39,12 @@ class AuthProvider with ChangeNotifier {
         await _loadUserData(firebaseUser.uid);
       }
 
-      // 🆕 Завершаем инициализацию
+      //  Завершаем инициализацию
       _isInitializing = false;
       notifyListeners();
     });
 
-    // 🆕 Таймаут на случай если authStateChanges не сработает
+    //  Таймаут на случай если authStateChanges не сработает
     Future.delayed(const Duration(seconds: 3), () {
       if (_isInitializing) {
         print('⏰ Таймаут инициализации AuthProvider');
@@ -124,7 +124,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 🎯 РЕГИСТРАЦИЯ
+  //  РЕГИСТРАЦИЯ
   Future<void> register({
     required String email,
     required String password,
@@ -183,7 +183,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 🎯 ВХОД
+  //  ВХОД
   Future<void> login({
     required String email,
     required String password,
@@ -200,7 +200,7 @@ class AuthProvider with ChangeNotifier {
 
       print('✅ Вход успешен: ${userCredential.user?.email}');
 
-      // 🎯 МИГРАЦИЯ ЛАЙКОВ ПОСЛЕ УСПЕШНОГО ВХОДА
+      //  МИГРАЦИЯ ЛАЙКОВ ПОСЛЕ УСПЕШНОГО ВХОДА
       if (userCredential.user != null) {
         await FavoriteService.migrateFavoritesOnLogin(userCredential.user!.uid);
       }
@@ -238,7 +238,7 @@ class AuthProvider with ChangeNotifier {
     const adminDomains = ['tommysinny.ru', 'company.com', 'admin.ru'];
     final isAdmin = adminDomains.contains(domain);
 
-    print('🎯 Результат: ${isAdmin ? 'ADMIN' : 'USER'}');
+    print(' Результат: ${isAdmin ? 'ADMIN' : 'USER'}');
     return isAdmin ? UserRole.admin : UserRole.user;
   }
 

@@ -7,7 +7,7 @@ class FirebaseFavoriteService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🎯 Получить коллекцию избранного для текущего пользователя
+  //  Получить коллекцию избранного для текущего пользователя
   static CollectionReference get _favoritesCollection {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -16,7 +16,7 @@ class FirebaseFavoriteService {
     return _firestore.collection('users').doc(userId).collection('favorites');
   }
 
-  // 🎯 Получить список ID избранных товаров
+  //  Получить список ID избранных товаров
   static Future<List<int>> getFavoriteIds() async {
     try {
       final user = _auth.currentUser;
@@ -35,7 +35,7 @@ class FirebaseFavoriteService {
     }
   }
 
-  // 🎯 Добавить товар в избранное
+  //  Добавить товар в избранное
   static Future<void> addToFavorites(int productId) async {
     try {
       final user = _auth.currentUser;
@@ -56,7 +56,7 @@ class FirebaseFavoriteService {
     }
   }
 
-  // 🎯 Удалить товар из избранного
+  //  Удалить товар из избранного
   static Future<void> removeFromFavorites(int productId) async {
     try {
       final user = _auth.currentUser;
@@ -73,7 +73,7 @@ class FirebaseFavoriteService {
     }
   }
 
-  // 🎯 Проверить, находится ли товар в избранном
+  //  Проверить, находится ли товар в избранном
   static Future<bool> isFavorite(int productId) async {
     try {
       final user = _auth.currentUser;
@@ -90,7 +90,7 @@ class FirebaseFavoriteService {
     }
   }
 
-  // 🎯 Переключить состояние избранного
+  //  Переключить состояние избранного
   static Future<void> toggleFavorite(int productId) async {
     try {
       final isCurrentlyFavorite = await isFavorite(productId);
@@ -106,7 +106,7 @@ class FirebaseFavoriteService {
     }
   }
 
-  // 🎯 Получить Stream для实时 обновлений избранного
+  //  Получить Stream для实时 обновлений избранного
   static Stream<List<int>> get favoritesStream {
     final user = _auth.currentUser;
     if (user == null) {
@@ -123,7 +123,7 @@ class FirebaseFavoriteService {
     });
   }
 
-  // 🎯 Очистить все избранное
+  //  Очистить все избранное
   static Future<void> clearFavorites() async {
     try {
       final user = _auth.currentUser;

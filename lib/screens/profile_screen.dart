@@ -21,12 +21,12 @@ class ProfileScreen extends StatelessWidget {
       return _buildLoadingScreen();
     }
 
-    // 🎯 Для незарегистрированных пользователей
+    //  Для незарегистрированных пользователей
    if (!authProvider.isLoggedIn) {
       return const AuthScreen();
     }
 
-    // 🎯 Для зарегистрированных пользователей
+    //  Для зарегистрированных пользователей
     return Scaffold(
       appBar: AppBar(
         title: const Text('Профиль'),
@@ -59,15 +59,15 @@ class ProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // 🎯 ШАПКА ПРОФИЛЯ
+          //  ШАПКА ПРОФИЛЯ
           _buildProfileHeader(user),
           const SizedBox(height: 32),
 
-          // 🎯 ОСНОВНЫЕ КАРТОЧКИ
+          //  ОСНОВНЫЕ КАРТОЧКИ
           _buildProfileCards(context, user),
           const SizedBox(height: 24),
 
-          // 🎯 АДМИН ПАНЕЛЬ (только для админов)
+          //  АДМИН ПАНЕЛЬ (только для админов)
           if (user.isAdmin) _buildAdminPanel(context),
         ],
       ),
@@ -139,7 +139,7 @@ class ProfileScreen extends StatelessWidget {
     return Column(
       children: [
 
-        // 🎯 ИСТОРИЯ ЗАКАЗОВ
+        //  ИСТОРИЯ ЗАКАЗОВ
         _buildProfileCard(
           icon: Icons.shopping_bag,
           title: 'История заказов',
@@ -151,7 +151,7 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // 🎯 НАСТРОЙКИ АККАУНТА
+        //  НАСТРОЙКИ АККАУНТА
         _buildProfileCard(
           icon: Icons.settings,
           title: 'Настройки аккаунта',
@@ -160,7 +160,7 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // 🎯 АДРЕСА ДОСТАВКИ
+        //  АДРЕСА ДОСТАВКИ
         _buildProfileCard(
           icon: Icons.location_on,
           title: 'Адреса доставки',
@@ -210,16 +210,13 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            Center(
+              child:
                 _buildAdminChip(
                   'Просмотр',
                   Icons.remove_red_eye_sharp,
                       () => _navigateToAdminPanel(context, 'products'),
                 )
-              ],
             ),
           ],
         ),
@@ -283,7 +280,7 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-// 🎯 БОТТОМ ШИИТ НАСТРОЕК АККАУНТА
+//  БОТТОМ ШИИТ НАСТРОЕК АККАУНТА
 class AccountSettingsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

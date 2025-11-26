@@ -402,7 +402,9 @@ class _CartScreenState extends State<CartScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: DecorationImage(
-                        image: NetworkImage(item.product.image),
+                        image: NetworkImage(item.product.images.isNotEmpty
+                            ? item.product.images.first
+                            : item.product.image),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -412,26 +414,34 @@ class _CartScreenState extends State<CartScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          item.product.title.length > 40
-                              ? '${item.product.title.substring(0, 40)}...'
-                              : item.product.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                        if (item.hasDiscount) ...[
+                          Text(
+                            '\$${item.unitPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.green,
+                            ),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '\$${item.product.price.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.green,
+                          const SizedBox(height: 2),
+                          Text(
+                            '\$${item.product.price.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              decoration: TextDecoration.lineThrough,
+                            ),
                           ),
-                        ),
+                        ] else ...[
+                          Text(
+                            '\$${item.unitPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
@@ -440,7 +450,6 @@ class _CartScreenState extends State<CartScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -451,7 +460,6 @@ class _CartScreenState extends State<CartScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -477,7 +485,8 @@ class _CartScreenState extends State<CartScreen> {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
-                  child: const Text('Купить'),
+                  child:
+                  const Text('Купить'),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
@@ -531,6 +540,14 @@ class _CartScreenState extends State<CartScreen> {
                   color: Colors.green,
                 ),
               ),
+              if (_calculateTotalSavings() > 0)
+                Text(
+                  'Экономия: \$${_calculateTotalSavings().toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.red,
+                  ),
+                ),
             ],
           ),
           const Spacer(),
@@ -551,6 +568,16 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
     );
+  }
+
+  double _calculateTotalSavings() {
+    double savings = 0.0;
+    for (final item in _cartItems) {
+      if (item.hasDiscount) {
+        savings += (item.product.price - item.unitPrice) * item.quantity;
+      }
+    }
+    return savings;
   }
 
   Widget _buildLoadingScreen() {

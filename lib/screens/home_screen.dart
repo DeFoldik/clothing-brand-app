@@ -14,7 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // 🎯 БАННЕРЫ ИВЕНТОВ
+  //  БАННЕРЫ ИВЕНТОВ
   final List<Map<String, dynamic>> _eventBanners = [
     {
       'image': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500',
@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // 🎯 APP BAR
+          //  APP BAR
           const SliverAppBar(
             title: Text('Fashion Store'),
             floating: true,
@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
             elevation: 0,
           ),
 
-          // 🎯 БАННЕРЫ
+          //  БАННЕРЫ
           SliverToBoxAdapter(
             child: EventBanner(
               banners: _eventBanners,
@@ -50,25 +50,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 🎯 СЕКЦИЯ: САМЫЕ ПОПУЛЯРНЫЕ
+          //  СЕКЦИЯ: САМЫЕ ПОПУЛЯРНЫЕ
           _buildProductSectionStream(
             title: 'Самые популярные',
             stream: FirestoreService.getPopularProducts(),
           ),
 
-          // 🎯 СЕКЦИЯ: НОВИНКИ
+          //  СЕКЦИЯ: НОВИНКИ
           _buildProductSectionStream(
             title: 'Новинки',
             stream: FirestoreService.getNewProducts(),
           ),
 
-          // 🎯 СЕКЦИЯ: ТОВАРЫ СО СКИДКОЙ
+          //  СЕКЦИЯ: ТОВАРЫ СО СКИДКОЙ
           _buildProductSectionStream(
             title: 'Товары со скидкой',
             stream: FirestoreService.getDiscountedProducts(),
           ),
 
-          // 🎯 СЕКЦИЯ: ВСЕ ТОВАРЫ
+          //  СЕКЦИЯ: ВСЕ ТОВАРЫ
           _buildProductSectionStream(
             title: 'Все товары',
             stream: FirestoreService.getProductsStream(),
@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 СЕКЦИЯ КАТЕГОРИЙ
+  //  СЕКЦИЯ КАТЕГОРИЙ
   Widget _buildCategoriesSection() {
     final categories = FirestoreService.getCategories();
 
@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 КАРТОЧКА КАТЕГОРИИ
+  //  КАРТОЧКА КАТЕГОРИИ
   Widget _buildCategoryCard(ProductCategory category) {
     return Card(
       elevation: 2,
@@ -163,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 УНИВЕРСАЛЬНАЯ СЕКЦИЯ ТОВАРОВ С STREAM
+  //  УНИВЕРСАЛЬНАЯ СЕКЦИЯ ТОВАРОВ С STREAM
   Widget _buildProductSectionStream({
     required String title,
     required Stream<List<Product>> stream,
@@ -209,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// 🎯 СЕТКА ТОВАРОВ - убираем лишние отступы
+//  СЕТКА ТОВАРОВ - убираем лишние отступы
   Widget _buildProductsGrid(List<Product> products) {
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -233,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 ЗАГРУЗКА
+  //  ЗАГРУЗКА
   Widget _buildLoadingGrid() {
     return SizedBox(
       height: 300,
@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 ПУСТАЯ СЕКЦИЯ
+  //  ПУСТАЯ СЕКЦИЯ
   Widget _buildEmptySection(String sectionName) {
     return Container(
       height: 120,
@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 ОШИБКА
+  //  ОШИБКА
   Widget _buildErrorSection(String error) {
     return Container(
       height: 120,

@@ -53,7 +53,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         });
       }
 
-      // 🎯 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ТОВАРОВ ИЗ FIREBASE
+      //  ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ТОВАРОВ ИЗ FIREBASE
       final favorites = await FavoriteService.getFavoriteProducts();
 
       print('✅ Найдено избранных товаров: ${favorites.length}');
@@ -77,13 +77,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
-  // 🎯 Callback для обновления при изменении лайка
+  //  Callback для обновления при изменении лайка
   void _onFavoriteChanged() {
     print('🔄 Обновляем экран из-за изменения лайка');
     _loadFavoriteProducts();
   }
 
-  // 🎯 Метод для RefreshIndicator
+  //  Метод для RefreshIndicator
   Future<void> _refreshFavorites() async {
     await _loadFavoriteProducts();
   }

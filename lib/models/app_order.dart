@@ -13,7 +13,7 @@ class AppOrder {
   final DeliveryAddress deliveryAddress;
   final String? trackingNumber;
   final String? notes;
-  final DateTime? updatedAt; // 🆕 Добавим поле для обновлений
+  final DateTime? updatedAt; //  Добавим поле для обновлений
 
   AppOrder({
     required this.id,
@@ -44,7 +44,7 @@ class AppOrder {
       deliveryAddress: DeliveryAddress.fromFirestore(addressData, 'temp'),
       trackingNumber: data['trackingNumber'],
       notes: data['notes'],
-      updatedAt: data['updatedAt']?.toDate(), // 🆕
+      updatedAt: data['updatedAt']?.toDate(), //
     );
   }
 
@@ -58,7 +58,7 @@ class AppOrder {
       'deliveryAddress': deliveryAddress.toFirestore(),
       if (trackingNumber != null) 'trackingNumber': trackingNumber,
       if (notes != null) 'notes': notes,
-      'updatedAt': FieldValue.serverTimestamp(), // 🆕
+      'updatedAt': FieldValue.serverTimestamp(), // 
     };
   }
 }

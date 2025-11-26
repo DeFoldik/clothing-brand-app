@@ -19,7 +19,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    print('🎯 OrderHistoryScreen инициализирован');
+    print(' OrderHistoryScreen инициализирован');
     _loadOrders();
   }
 
@@ -31,7 +31,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
       _ordersStream = OrderService.getUserOrders();
 
-      // 🎯 ПОДПИСЫВАЕМСЯ ДЛЯ ОТЛАДКИ
+      //  ПОДПИСЫВАЕМСЯ ДЛЯ ОТЛАДКИ
       _ordersStream?.first.then((orders) {
         print('✅ Заказы загружены: ${orders.length}');
         for (final order in orders) {
@@ -93,7 +93,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 
-  // 🎯 Пустой экран
+  //  Пустой экран
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -125,14 +125,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 
-  // 🎯 Экран загрузки
+  //  Экран загрузки
   Widget _buildLoadingScreen() {
     return const Center(
       child: CircularProgressIndicator(),
     );
   }
 
-  // 🎯 Экран ошибки
+  //  Экран ошибки
   Widget _buildErrorScreen() {
     return Center(
       child: Column(

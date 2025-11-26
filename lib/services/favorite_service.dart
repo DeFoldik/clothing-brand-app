@@ -8,10 +8,10 @@ import '../models/product.dart';
 class FavoriteService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🎯 Определяем, какой сервис использовать
+  //  Определяем, какой сервис использовать
   static bool get _useFirebase => _auth.currentUser != null;
 
-  // 🎯 Получить список ID избранных товаров
+  //  Получить список ID избранных товаров
   static Future<List<int>> getFavoriteIds() async {
     if (_useFirebase) {
       return await FirebaseFavoriteService.getFavoriteIds();
@@ -26,7 +26,7 @@ class FavoriteService {
 
       if (favoriteIds.isEmpty) return [];
 
-      // 🎯 ИСПОЛЬЗУЕМ FIREBASE ДЛЯ ПОЛУЧЕНИЯ ТОВАРОВ
+      // ИСПОЛЬЗУЕМ FIREBASE ДЛЯ ПОЛУЧЕНИЯ ТОВАРОВ
       return await FirestoreService.getProductsByIds(favoriteIds);
     } catch (e) {
       print('❌ Ошибка получения избранных товаров: $e');
@@ -34,7 +34,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Добавить товар в избранное
+  //  Добавить товар в избранное
   static Future<void> addToFavorites(int productId) async {
     if (_useFirebase) {
       await FirebaseFavoriteService.addToFavorites(productId);
@@ -43,7 +43,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Удалить товар из избранного
+  //  Удалить товар из избранного
   static Future<void> removeFromFavorites(int productId) async {
     if (_useFirebase) {
       await FirebaseFavoriteService.removeFromFavorites(productId);
@@ -52,7 +52,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Проверить, находится ли товар в избранном
+  //  Проверить, находится ли товар в избранном
   static Future<bool> isFavorite(int productId) async {
     if (_useFirebase) {
       return await FirebaseFavoriteService.isFavorite(productId);
@@ -61,7 +61,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Переключить состояние избранного
+  //  Переключить состояние избранного
   static Future<void> toggleFavorite(int productId) async {
     if (_useFirebase) {
       await FirebaseFavoriteService.toggleFavorite(productId);
@@ -70,7 +70,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Получить Stream для实时 обновлений (только для Firebase)
+  //  Получить Stream для实时 обновлений (только для Firebase)
   static Stream<List<int>> get favoritesStream {
     if (_useFirebase) {
       return FirebaseFavoriteService.favoritesStream;
@@ -80,7 +80,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Очистить все избранное
+  //  Очистить все избранное
   static Future<void> clearFavorites() async {
     if (_useFirebase) {
       await FirebaseFavoriteService.clearFavorites();
@@ -89,7 +89,7 @@ class FavoriteService {
     }
   }
 
-  // 🎯 Миграция лайков при входе пользователя
+  //  Миграция лайков при входе пользователя
   static Future<void> migrateFavoritesOnLogin(String userId) async {
     try {
       print('🔄 Миграция лайков при входе пользователя...');

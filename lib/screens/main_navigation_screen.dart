@@ -23,7 +23,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const ProfileScreen(),
   ];
 
-  // 🎯 Функция для создания анимированных иконок
+  //  Функция для создания анимированных иконок
   Widget _buildAnimatedIcon(int index, IconData icon) {
     final isSelected = index == _currentIndex;
 

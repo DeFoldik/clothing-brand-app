@@ -6,12 +6,12 @@ class AddressService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🎯 ВАРИАНТ 1: Отдельная коллекция addresses
+  //  ВАРИАНТ 1: Отдельная коллекция addresses
   static CollectionReference get _addressesCollection {
     return _firestore.collection('addresses');
   }
 
-  // 🎯 ВАРИАНТ 2: Подколлекция в users (для обратной совместимости)
+  //  ВАРИАНТ 2: Подколлекция в users (для обратной совместимости)
   static CollectionReference get _userAddressesCollection {
     final userId = _auth.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
@@ -146,7 +146,7 @@ class AddressService {
     if (user == null) throw Exception('User not authenticated');
 
     try {
-      // 🎯 ПРОВЕРКА: Убедимся, что ID не пустой
+      //  ПРОВЕРКА: Убедимся, что ID не пустой
       if (address.id.isEmpty) {
         throw Exception('ID адреса не может быть пустым при обновлении');
       }

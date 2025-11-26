@@ -27,13 +27,19 @@ class _ProductCardState extends State<ProductCard> {
   final PageController _pageController = PageController();
 
   List<String> get _productImages {
-    if (widget.product.images != null && widget.product.images!.isNotEmpty) {
-      return widget.product.images!.take(10).toList();
+    // Сначала пробуем images из продукта
+    if (widget.product.images.isNotEmpty) {
+      return widget.product.images;
     }
-    return [widget.product.image];
+    // Затем пробуем основное изображение
+    if (widget.product.image.isNotEmpty) {
+      return [widget.product.image];
+    }
+    // Fallback на placeholder
+    return ['https://via.placeholder.com/400x400?text=No+Image'];
   }
 
-  // 🎯 ПРОВЕРКА СКИДКИ И СТАТУСА НОВИНКИ
+  //  ПРОВЕРКА СКИДКИ И СТАТУСА НОВИНКИ
   bool get _hasDiscount => widget.product.discountPrice != null &&
       widget.product.discountPrice! < widget.product.price;
 
@@ -79,7 +85,7 @@ class _ProductCardState extends State<ProductCard> {
     }
   }
 
-  // 🎯 ИСПРАВЛЕННЫЙ МЕТОД ДЛЯ ЦЕНЫ СО СКИДКОЙ
+  //  ИСПРАВЛЕННЫЙ МЕТОД ДЛЯ ЦЕНЫ СО СКИДКОЙ
   Widget _buildPriceWithDiscount() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,15 +220,21 @@ class _ProductCardState extends State<ProductCard> {
                               child: CircularProgressIndicator(),
                             ),
                           ),
-                          errorWidget: (context, url, error) =>
-                          const Icon(Icons.error),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: const Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          ),
                         );
                       },
                     ),
                   ),
                 ),
 
-                // 🎯 БЕЙДЖ "NEW" ДЛЯ НОВЫХ ТОВАРОВ
+                //  БЕЙДЖ "NEW" ДЛЯ НОВЫХ ТОВАРОВ
                 if (_isNew)
                   Positioned(
                     top: 8,
@@ -244,7 +256,7 @@ class _ProductCardState extends State<ProductCard> {
                     ),
                   ),
 
-                // 🎯 БЕЙДЖ СКИДКИ
+                //  БЕЙДЖ СКИДКИ
                 if (_hasDiscount)
                   Positioned(
                     top: 8,
@@ -293,7 +305,7 @@ class _ProductCardState extends State<ProductCard> {
                     ),
                   ),
 
-                // 🎯 КНОПКА ИЗБРАННОГО (ПЕРЕМЕЩЕНА НИЖЕ БЕЙДЖЕЙ)
+                //  КНОПКА ИЗБРАННОГО (ПЕРЕМЕЩЕНА НИЖЕ БЕЙДЖЕЙ)
                 Positioned(
                   top: _hasDiscount || _isNew ? 40 : 8, // Смещаем вниз если есть бейджи
                   right: 8,

@@ -25,6 +25,12 @@ class OrderService {
     if (user == null) throw Exception('User not authenticated');
 
     try {
+
+      final calculatedTotalPrice = items.fold(0.0, (sum, item) {
+        final itemPrice = item.unitPrice; // Используем цену со скидкой
+        return sum + (itemPrice * item.quantity);
+      });
+
       // 1. Проверяем доступность товаров и обновляем остатки
       for (final item in items) {
         final isAvailable = await FirestoreService.updateVariantStock(
@@ -45,7 +51,7 @@ class OrderService {
         id: orderRef.id,
         userId: user.uid,
         items: items,
-        totalPrice: totalPrice,
+          totalPrice: calculatedTotalPrice,
         createdAt: DateTime.now(),
         status: OrderStatus.pending,
         deliveryAddress: deliveryAddress,

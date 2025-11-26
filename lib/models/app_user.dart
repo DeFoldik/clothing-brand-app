@@ -35,7 +35,7 @@ class AppUser {
     );
   }
 
-  // 🆕 Конструктор из DocumentSnapshot (для админ-панели)
+  //  Конструктор из DocumentSnapshot (для админ-панели)
   factory AppUser.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return AppUser(

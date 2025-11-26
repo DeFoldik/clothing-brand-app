@@ -47,18 +47,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<ProductDetail> _loadProductDetail() async {
     try {
-      // Сначала пробуем загрузить из Firestore
+      // Прямой запрос к Firebase
       final firestoreProduct = await FirestoreService.getProductById(widget.product.id.toString());
 
       if (firestoreProduct != null) {
-        // Используем данные из Firestore
+        print('✅ Товар загружен из Firebase: ${firestoreProduct.title}');
+        print(' Материал: ${firestoreProduct.material}');
+        print(' Уход: ${firestoreProduct.careInstructions}');
+        print(' Сезон: ${firestoreProduct.season}');
+        print(' Доп. характеристики: ${firestoreProduct.additionalSpecs}');
+
+        // Создаем ProductDetail из реальных данных с ВСЕМИ полями
         return ProductDetail(
           id: firestoreProduct.id,
           title: firestoreProduct.title,
           price: firestoreProduct.price,
           description: firestoreProduct.description,
           category: firestoreProduct.category,
-          images: [firestoreProduct.image],
+          images: firestoreProduct.images.isNotEmpty
+              ? firestoreProduct.images
+              : [firestoreProduct.image],
           availableSizes: firestoreProduct.sizes.map((size) => ProductSize(
             size: size,
             inStock: firestoreProduct.isVariantAvailable(size, _getDefaultColor(firestoreProduct)),
@@ -66,28 +74,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           availableColors: firestoreProduct.colors.map((color) => ProductColor(
             name: color,
             color: _getColorFromName(color),
-            imageUrl: firestoreProduct.image,
+            imageUrl: firestoreProduct.images.isNotEmpty
+                ? firestoreProduct.images.first
+                : firestoreProduct.image,
             inStock: firestoreProduct.isVariantAvailable(_getDefaultSize(firestoreProduct), color),
           )).toList(),
           specification: ProductSpecification(
-            material: 'Хлопок 80%, Полиэстер 20%',
-            care: 'Стирка при 30°C, не отбеливать',
-            season: 'Круглогодичный',
+            material: firestoreProduct.material,
+            care: firestoreProduct.careInstructions,
+            season: firestoreProduct.season,
+            additionalInfo: firestoreProduct.additionalSpecs,
           ),
           discountPrice: firestoreProduct.discountPrice,
           rating: 4.5,
           reviewCount: 128,
           isNew: firestoreProduct.isNew,
-          sizeChartImage: 'https://via.placeholder.com/400x600/FFFFFF/000000?text=Size+Chart',
+          isFavorite: false,
+          sizeChartImage: null,
+          //  ПРЯМОЕ ПРИСВОЕНИЕ ВСЕХ ПОЛЕЙ
+          material: firestoreProduct.material,
+          careInstructions: firestoreProduct.careInstructions,
+          season: firestoreProduct.season,
+          additionalSpecs: firestoreProduct.additionalSpecs,
         );
       } else {
-        // Fallback на старый сервис
-        return ProductDetailService.getProductDetail(widget.product);
+        // Fallback на сервис
+        final detail = await ProductDetailService.getProductDetail(widget.product);
+        print('⚠️ Используем базовые данные, материал: ${detail.material}');
+        return detail;
       }
     } catch (e) {
       print('❌ Ошибка загрузки деталей товара: $e');
-      // Fallback на старый сервис при ошибке
-      return ProductDetailService.getProductDetail(widget.product);
+      final detail = await ProductDetailService.getProductDetail(widget.product);
+      return detail;
     }
   }
 
@@ -485,7 +504,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildImageGallery() {
-    final images = _productDetail?.images ?? [widget.product.image];
+    final images = _productDetail?.images.isNotEmpty == true
+        ? _productDetail!.images
+        : (widget.product.images.isNotEmpty
+        ? widget.product.images
+        : [widget.product.image]);
 
     return SizedBox(
       height: 400,
@@ -765,7 +788,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildSpecifications() {
-    final spec = _productDetail!.specification;
+    //  ИСПОЛЬЗУЕМ ДАННЫЕ НАПРЯМУЮ ИЗ _productDetail
+    final material = _productDetail?.material;
+    final care = _productDetail?.careInstructions;
+    final season = _productDetail?.season;
+    final additionalInfo = _productDetail?.additionalSpecs;
+
+    //  ПРОВЕРЯЕМ, ЕСТЬ ЛИ ХОТЯ БЫ ОДНА ХАРАКТЕРИСТИКА
+    final hasData = material != null && material.isNotEmpty ||
+        care != null && care.isNotEmpty ||
+        season != null && season.isNotEmpty ||
+        (additionalInfo != null && additionalInfo.isNotEmpty);
+
+    if (!hasData) {
+      print('ℹ️ Нет данных для характеристик');
+      return const SizedBox(); // Не показываем секцию если нет данных
+    }
+
+    print('📋 Отображаем характеристики:');
+    print('   Материал: $material');
+    print('   Уход: $care');
+    print('   Сезон: $season');
+    print('   Дополнительно: $additionalInfo');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -778,15 +822,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        if (spec.material != null)
-          _buildSpecItem('Материал', spec.material!),
-        if (spec.care != null)
-          _buildSpecItem('Уход', spec.care!),
-        if (spec.season != null)
-          _buildSpecItem('Сезон', spec.season!),
-        if (spec.additionalInfo != null) ...[
-          for (final entry in spec.additionalInfo!.entries)
-            _buildSpecItem(entry.key, entry.value),
+
+        //  МАТЕРИАЛ
+        if (material != null && material.isNotEmpty)
+          _buildSpecItem('Материал', material),
+
+        //  УХОД
+        if (care != null && care.isNotEmpty)
+          _buildSpecItem('Рекомендации по уходу', care),
+
+        //  СЕЗОН
+        if (season != null && season.isNotEmpty)
+          _buildSpecItem('Сезон', season),
+
+        //  ДОПОЛНИТЕЛЬНЫЕ ХАРАКТЕРИСТИКИ
+        if (additionalInfo != null && additionalInfo.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'Дополнительные характеристики:',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ...additionalInfo.entries.map((entry) =>
+              _buildSpecItem(entry.key, entry.value)
+          ),
         ],
       ],
     );

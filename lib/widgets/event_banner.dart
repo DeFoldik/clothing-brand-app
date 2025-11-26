@@ -25,7 +25,7 @@ class _EventBannerState extends State<EventBanner> {
       margin: const EdgeInsets.all(16),
       child: Stack(
         children: [
-          // 🎯 PAGE VIEW ДЛЯ СВАЙПА БАННЕРОВ
+          //  PAGE VIEW ДЛЯ СВАЙПА БАННЕРОВ
           PageView.builder(
             controller: _pageController,
             itemCount: widget.banners.length,
@@ -40,7 +40,7 @@ class _EventBannerState extends State<EventBanner> {
             },
           ),
 
-          // 🎯 ИНДИКАТОР ТОЧЕК СНИЗУ
+          //  ИНДИКАТОР ТОЧЕК СНИЗУ
           if (widget.banners.length > 1)
             Positioned(
               bottom: 12,

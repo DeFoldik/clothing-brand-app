@@ -16,7 +16,7 @@ class AdminService {
   static final FirebaseStorage _storage = FirebaseStorage.instance;
   static final ImagePicker _imagePicker = ImagePicker();
 
-  // 🎯 УЛУЧШЕННЫЙ МЕТОД ЗАГРУЗКИ ИЗОБРАЖЕНИЯ
+  //  УЛУЧШЕННЫЙ МЕТОД ЗАГРУЗКИ ИЗОБРАЖЕНИЯ
   static Future<String?> uploadProductImage(File imageFile) async {
     try {
       print('🔄 Начинаем загрузку изображения...');
@@ -69,7 +69,7 @@ class AdminService {
     }
   }
 
-  // 🎯 ВЫБОР ИЗОБРАЖЕНИЯ С ОБРАБОТКОЙ ОШИБОК
+  //  ВЫБОР ИЗОБРАЖЕНИЯ С ОБРАБОТКОЙ ОШИБОК
   static Future<File?> pickImageFromGallery() async {
     try {
       print('🖼️ Выбор изображения из галереи...');
@@ -178,7 +178,7 @@ class AdminService {
   static Stream<List<Product>> getProductsStream() {
     return _firestore
         .collection('products')
-        .where('isActive', isEqualTo: true) // 🆕 Только активные товары
+        .where('isActive', isEqualTo: true) //  Только активные товары
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -230,6 +230,11 @@ class AdminService {
         'sizes': product.sizes,
         'colors': product.colors,
         'variants': product.variants.map((v) => v.toMap()).toList(),
+        //  Добавляем новые поля
+        'material': product.material,
+        'careInstructions': product.careInstructions,
+        'season': product.season,
+        'additionalSpecs': product.additionalSpecs,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
@@ -292,6 +297,11 @@ class AdminService {
         'sizes': product.sizes,
         'colors': product.colors,
         'variants': product.variants.map((v) => v.toMap()).toList(),
+        //  Добавляем новые поля
+        'material': product.material,
+        'careInstructions': product.careInstructions,
+        'season': product.season,
+        'additionalSpecs': product.additionalSpecs,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };

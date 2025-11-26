@@ -6,7 +6,7 @@ import '../models/categories.dart';
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 🎯 ПОЛУЧЕНИЕ ТОВАРОВ ПО КАТЕГОРИИ
+  //  ПОЛУЧЕНИЕ ТОВАРОВ ПО КАТЕГОРИИ
   static Stream<List<Product>> getProductsByCategory(ProductCategory category) {
     try {
       Query query = _firestore
@@ -28,13 +28,13 @@ class FirestoreService {
     }
   }
 
-  // 🎯 ПОЛУЧЕНИЕ ВСЕХ КАТЕГОРИЙ (из enum)
+  //  ПОЛУЧЕНИЕ ВСЕХ КАТЕГОРИЙ (из enum)
   static List<ProductCategory> getCategories() {
     return ProductCategory.availableCategories;
   }
 
 
-  // 🎯 ПОИСК ТОВАРОВ С ФИЛЬТРАЦИЕЙ ПО КАТЕГОРИИ
+  //  ПОИСК ТОВАРОВ С ФИЛЬТРАЦИЕЙ ПО КАТЕГОРИИ
   static Stream<List<Product>> searchProducts(String query, {ProductCategory category = ProductCategory.all}) {
     try {
       Query firestoreQuery = _firestore
@@ -61,7 +61,7 @@ class FirestoreService {
     }
   }
 
-  // 🎯 ПОПУЛЯРНЫЕ ТОВАРЫ
+  //  ПОПУЛЯРНЫЕ ТОВАРЫ
   static Stream<List<Product>> getPopularProducts() {
     try {
       return _firestore
@@ -81,7 +81,7 @@ class FirestoreService {
     }
   }
 
-  // 🎯 НОВИНКИ
+  //  НОВИНКИ
   static Stream<List<Product>> getNewProducts() {
     try {
       return _firestore
@@ -101,7 +101,7 @@ class FirestoreService {
     }
   }
 
-  // 🎯 ТОВАРЫ СО СКИДКОЙ
+  //  ТОВАРЫ СО СКИДКОЙ
   static Stream<List<Product>> getDiscountedProducts() {
     try {
       return _firestore
@@ -121,7 +121,7 @@ class FirestoreService {
     }
   }
 
-  // 🎯 ВСЕ ТОВАРЫ
+  //  ВСЕ ТОВАРЫ
   static Stream<List<Product>> getProductsStream() {
     try {
       return _firestore
@@ -139,7 +139,7 @@ class FirestoreService {
     }
   }
 
-  // 🎯 ПОЛУЧЕНИЕ ТОВАРА ПО ID
+  //  ПОЛУЧЕНИЕ ТОВАРА ПО ID
   static Future<Product?> getProductById(String productId) async {
     try {
       final doc = await _firestore.collection('products').doc(productId).get();
@@ -153,11 +153,9 @@ class FirestoreService {
     }
   }
 
-  // services/firestore_service.dart - добавляем методы для сортировки
 
 
-
-// 🎯 ФИЛЬТРАЦИЯ НА СТОРОНЕ КЛИЕНТА
+//  ФИЛЬТРАЦИЯ НА СТОРОНЕ КЛИЕНТА
   static List<Product> _applyClientSideFilters(
       List<Product> products, {
         required String searchQuery,
@@ -195,7 +193,7 @@ class FirestoreService {
     }).toList();
   }
 
-// 🎯 СОРТИРОВКА ТОВАРОВ
+//  СОРТИРОВКА ТОВАРОВ
   static List<Product> _sortProducts(List<Product> products, String sortBy) {
     List<Product> sorted = List.from(products);
 
@@ -269,7 +267,7 @@ class FirestoreService {
   }
 
 
-// 🎯 ПОИСК С СОРТИРОВКОЙ И ФИЛЬТРАЦИЕЙ
+//  ПОИСК С СОРТИРОВКОЙ И ФИЛЬТРАЦИЕЙ
   static Stream<List<Product>> searchProductsWithFilters({
     String searchQuery = '',
     ProductCategory category = ProductCategory.all,
@@ -313,7 +311,7 @@ class FirestoreService {
     }
   }
 
-// 🎯 ПОЛУЧЕНИЕ ВСЕХ ДОСТУПНЫХ РАЗМЕРОВ И ЦВЕТОВ (для фильтров)
+//  ПОЛУЧЕНИЕ ВСЕХ ДОСТУПНЫХ РАЗМЕРОВ И ЦВЕТОВ (для фильтров)
   static Future<Map<String, List<String>>> getAvailableFilters() async {
     try {
       final snapshot = await _firestore
@@ -344,7 +342,7 @@ class FirestoreService {
     }
   }
 
-  // 🎯 ОБНОВЛЕНИЕ ОСТАТКОВ ПРИ ПОКУПКЕ
+  //  ОБНОВЛЕНИЕ ОСТАТКОВ ПРИ ПОКУПКЕ
   static Future<bool> updateVariantStock({
     required String productId,
     required String size,

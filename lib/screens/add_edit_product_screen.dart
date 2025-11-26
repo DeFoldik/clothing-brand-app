@@ -4,6 +4,7 @@ import '../models/categories.dart';
 import '../models/product_variant.dart';
 import '../services/admin_service.dart';
 import 'dart:io';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final Product? product;
@@ -24,6 +25,18 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   bool _isUploadingImage = false;
   double _uploadProgress = 0.0;
 
+
+  final _materialController = TextEditingController();
+  final _careController = TextEditingController();
+  final _seasonController = TextEditingController();
+  final _specKeyController = TextEditingController();
+  final _specValueController = TextEditingController();
+
+  bool _enableMaterial = false;
+  bool _enableCare = false;
+  bool _enableSeason = false;
+
+  Map<String, String> _additionalSpecs = {};
 
   // Контроллеры для вариантов
   final _sizeController = TextEditingController();
@@ -81,15 +94,368 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _colors = List.from(product.colors);
     _variants = List.from(product.variants);
 
-    // Инициализируем выбранные значения первыми доступными
+    // Заполняем новые поля и включаем переключатели если есть данные
+    _materialController.text = product.material ?? '';
+    _careController.text = product.careInstructions ?? '';
+    _seasonController.text = product.season ?? '';
+    _additionalSpecs = Map.from(product.additionalSpecs ?? {});
+
+    // Включаем переключатели если есть данные
+    _enableMaterial = product.material != null && product.material!.isNotEmpty;
+    _enableCare = product.careInstructions != null && product.careInstructions!.isNotEmpty;
+    _enableSeason = product.season != null && product.season!.isNotEmpty;
+
     if (_sizes.isNotEmpty) _selectedSize = _sizes.first;
     if (_colors.isNotEmpty) _selectedColor = _colors.first;
+  }
+
+  Widget _buildSpecificationsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Характеристики товара',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Включите нужные характеристики и заполните их',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // МАТЕРИАЛ С ПЕРЕКЛЮЧАТЕЛЕМ
+            _buildToggleField(
+              title: 'Материал',
+              value: _enableMaterial,
+              onChanged: (value) {
+                setState(() {
+                  _enableMaterial = value;
+                  if (!value) _materialController.clear();
+                });
+              },
+              controller: _materialController,
+              hintText: 'Например: Хлопок 80%, Полиэстер 20%',
+              enabled: _enableMaterial,
+            ),
+            const SizedBox(height: 16),
+
+            // УХОД С ПЕРЕКЛЮЧАТЕЛЕМ
+            _buildToggleField(
+              title: 'Рекомендации по уходу',
+              value: _enableCare,
+              onChanged: (value) {
+                setState(() {
+                  _enableCare = value;
+                  if (!value) _careController.clear();
+                });
+              },
+              controller: _careController,
+              hintText: 'Например: Стирка при 30°C, не отбеливать',
+              enabled: _enableCare,
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+
+            // СЕЗОН С ПЕРЕКЛЮЧАТЕЛЕМ
+            _buildToggleField(
+              title: 'Сезон',
+              value: _enableSeason,
+              onChanged: (value) {
+                setState(() {
+                  _enableSeason = value;
+                  if (!value) _seasonController.clear();
+                });
+              },
+              controller: _seasonController,
+              hintText: 'Например: Круглогодичный, Лето, Зима',
+              enabled: _enableSeason,
+            ),
+            const SizedBox(height: 24),
+
+            // ДОПОЛНИТЕЛЬНЫЕ ХАРАКТЕРИСТИКИ (всегда доступны)
+            _buildAdditionalSpecsSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  //  ВИДЖЕТ ДЛЯ ПОЛЯ С ПЕРЕКЛЮЧАТЕЛЕМ
+  Widget _buildToggleField({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required TextEditingController controller,
+    required String hintText,
+    required bool enabled,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Заголовок и переключатель
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: Colors.blue,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Поле ввода
+        TextFormField(
+          controller: controller,
+          enabled: enabled,
+          decoration: InputDecoration(
+            hintText: hintText,
+            border: const OutlineInputBorder(),
+            filled: !enabled,
+            fillColor: !enabled ? Colors.grey[100] : null,
+            hintStyle: TextStyle(
+              color: !enabled ? Colors.grey[400] : null,
+            ),
+          ),
+          maxLines: maxLines,
+          validator: (text) {
+            // Валидация только если поле включено и обязательно для заполнения
+            if (value && (text == null || text.trim().isEmpty)) {
+              return 'Заполните это поле';
+            }
+            return null;
+          },
+        ),
+
+        // Подсказка о статусе
+        if (!enabled) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Поле отключено',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[500],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  //  СЕКЦИЯ ДОПОЛНИТЕЛЬНЫХ ХАРАКТЕРИСТИК
+  Widget _buildAdditionalSpecsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Дополнительные характеристики',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Добавьте любые дополнительные характеристики товара',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Форма добавления
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _specKeyController,
+                decoration: const InputDecoration(
+                  labelText: 'Название характеристики',
+                  hintText: 'Например: Посадка, Длина, Узор',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                controller: _specValueController,
+                decoration: const InputDecoration(
+                  labelText: 'Значение',
+                  hintText: 'Например: Regular Fit, Стандартная',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _addAdditionalSpec,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              child: const Text('Добавить'),
+            ),
+          ],
+        ),
+
+        // Список добавленных характеристик
+        if (_additionalSpecs.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text(
+            'Добавленные характеристики:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ..._additionalSpecs.entries.map((entry) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              title: Text(
+                entry.key,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(entry.value),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _removeAdditionalSpec(entry.key),
+              ),
+            ),
+          )).toList(),
+
+          // Кнопка очистки всех дополнительных характеристик
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _clearAllAdditionalSpecs,
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Очистить все'),
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Дополнительные характеристики не добавлены',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Метод для добавления дополнительной характеристики
+  void _addAdditionalSpec() {
+    final key = _specKeyController.text.trim();
+    final value = _specValueController.text.trim();
+
+    if (key.isNotEmpty && value.isNotEmpty) {
+      if (_additionalSpecs.containsKey(key)) {
+        _showSnackBar('Характеристика "$key" уже существует', isError: true);
+        return;
+      }
+
+      setState(() {
+        _additionalSpecs[key] = value;
+        _specKeyController.clear();
+        _specValueController.clear();
+      });
+      _showSnackBar('Характеристика "$key" добавлена');
+    } else {
+      _showSnackBar('Заполните оба поля', isError: true);
+    }
+  }
+
+  // Метод для удаления дополнительной характеристики
+  void _removeAdditionalSpec(String key) {
+    setState(() {
+      _additionalSpecs.remove(key);
+    });
+    _showSnackBar('Характеристика "$key" удалена');
+  }
+
+  // Метод для очистки всех дополнительных характеристик
+  void _clearAllAdditionalSpecs() {
+    if (_additionalSpecs.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Очистить все характеристики?'),
+        content: Text('Будет удалено ${_additionalSpecs.length} характеристик'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _additionalSpecs.clear();
+              });
+              Navigator.pop(context);
+              _showSnackBar('Все характеристики очищены');
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Очистить'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategory == null) {
       _showSnackBar('Выберите категорию', isError: true);
+      return;
+    }
+
+    //  Проверка включенных полей
+    if (_enableMaterial && _materialController.text.trim().isEmpty) {
+      _showSnackBar('Заполните поле "Материал"', isError: true);
+      return;
+    }
+    if (_enableCare && _careController.text.trim().isEmpty) {
+      _showSnackBar('Заполните поле "Рекомендации по уходу"', isError: true);
+      return;
+    }
+    if (_enableSeason && _seasonController.text.trim().isEmpty) {
+      _showSnackBar('Заполните поле "Сезон"', isError: true);
       return;
     }
 
@@ -112,6 +478,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         sizes: _sizes,
         colors: _colors,
         variants: _variants,
+        //  Добавляем новые поля только если включены
+        material: _enableMaterial ? _materialController.text.trim() : null,
+        careInstructions: _enableCare ? _careController.text.trim() : null,
+        season: _enableSeason ? _seasonController.text.trim() : null,
+        additionalSpecs: _additionalSpecs.isNotEmpty ? _additionalSpecs : null,
         createdAt: widget.product?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -132,7 +503,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     }
   }
 
-  // 🎯 ДОБАВЛЕНИЕ РАЗМЕРА
+  //  ДОБАВЛЕНИЕ РАЗМЕРА
   void _addSize() {
     final size = _sizeController.text.trim();
     if (size.isNotEmpty && !_sizes.contains(size)) {
@@ -161,7 +532,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _showSnackBar('Размер "$size" удален');
   }
 
-  // 🎯 ДОБАВЛЕНИЕ ЦВЕТА
+  //  ДОБАВЛЕНИЕ ЦВЕТА
   void _addColor() {
     final color = _colorController.text.trim();
     if (color.isNotEmpty && !_colors.contains(color)) {
@@ -190,7 +561,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _showSnackBar('Цвет "$color" удален');
   }
 
-  // 🎯 ДОБАВЛЕНИЕ ВАРИАНТА
+  //  ДОБАВЛЕНИЕ ВАРИАНТА
   void _addVariant() {
     if (_selectedSize == null || _selectedColor == null) {
       _showSnackBar('Выберите размер и цвет', isError: true);
@@ -237,7 +608,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     });
   }
 
-  // 🎯 РЕДАКТИРОВАНИЕ ВАРИАНТА
+  //  РЕДАКТИРОВАНИЕ ВАРИАНТА
   void _editVariant(ProductVariant variant) {
     setState(() {
       _editingVariant = variant;
@@ -250,7 +621,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _showSnackBar('Редактирование варианта: ${variant.size}, ${variant.color}');
   }
 
-  // 🎯 УДАЛЕНИЕ ВАРИАНТА
+  //  УДАЛЕНИЕ ВАРИАНТА
   void _removeVariant(ProductVariant variant) {
     setState(() {
       _variants.remove(variant);
@@ -258,7 +629,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _showSnackBar('Вариант удален');
   }
 
-  // 🎯 СБРОС ФОРМЫ ВАРИАНТА
+  //  СБРОС ФОРМЫ ВАРИАНТА
   void _resetVariantForm() {
     setState(() {
       _editingVariant = null;
@@ -270,7 +641,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     });
   }
 
-  // 🎯 ОТМЕНА РЕДАКТИРОВАНИЯ ВАРИАНТА
+  //  ОТМЕНА РЕДАКТИРОВАНИЯ ВАРИАНТА
   void _cancelEditVariant() {
     _resetVariantForm();
     _showSnackBar('Редактирование отменено');
@@ -346,9 +717,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         Container(
                           width: 24,
                           height: 24,
-                          child: Image.asset(
+                          child: SvgPicture.asset(
                             category.iconPath,
-                            color: Colors.grey[700],
+                            colorFilter: ColorFilter.mode(
+                              Colors.grey[700]!,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -426,32 +800,37 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 🎯 ИЗОБРАЖЕНИЯ
+              //  ИЗОБРАЖЕНИЯ
               _buildSectionTitle('Изображения товара'),
               _buildImageSection(),
               const SizedBox(height: 24),
 
-              // 🎯 РАЗМЕРЫ
+              //  РАЗМЕРЫ
               _buildSectionTitle('Размеры'),
               _buildSizesSection(),
               const SizedBox(height: 16),
 
-              // 🎯 ЦВЕТА
+              //  ЦВЕТА
               _buildSectionTitle('Цвета'),
               _buildColorsSection(),
               const SizedBox(height: 24),
 
-              // 🎯 ВАРИАНТЫ ТОВАРА
+              //  ВАРИАНТЫ ТОВАРА
               _buildSectionTitle('Варианты товара'),
               _buildVariantsSection(),
               const SizedBox(height: 24),
 
-              // 🎯 ФОРМА ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ ВАРИАНТА
+              //  ФОРМА ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ ВАРИАНТА
               _buildSectionTitle(_isEditingVariant ? 'Редактировать вариант' : 'Добавить вариант'),
               _buildVariantForm(),
               const SizedBox(height: 24),
 
-              // 🎯 НАСТРОЙКИ
+              //  ДОБАВЛЯЕМ СЕКЦИЮ ХАРАКТЕРИСТИК ЗДЕСЬ
+              _buildSectionTitle('Характеристики товара'),
+              _buildSpecificationsSection(),
+              const SizedBox(height: 24),
+
+              //  НАСТРОЙКИ
               _buildSectionTitle('Настройки'),
               _buildSettingsSection(),
               const SizedBox(height: 24),
@@ -480,7 +859,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  // 🎯 СЕКЦИЯ РАЗМЕРОВ
+  //  СЕКЦИЯ РАЗМЕРОВ
   Widget _buildSizesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,7 +906,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  // 🎯 СЕКЦИЯ ЦВЕТОВ
+  //  СЕКЦИЯ ЦВЕТОВ
   Widget _buildColorsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,7 +953,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  // 🎯 ФОРМА ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ ВАРИАНТА
+  //  ФОРМА ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ ВАРИАНТА
   Widget _buildVariantForm() {
     return Card(
       child: Padding(
@@ -679,7 +1058,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  // 🎯 СЕКЦИЯ ВАРИАНТОВ
+  //  СЕКЦИЯ ВАРИАНТОВ
   Widget _buildVariantsSection() {
     if (_variants.isEmpty) {
       return const Card(
@@ -782,21 +1161,16 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
+                     OutlinedButton.icon(
                         onPressed: _isUploadingImage ? null : _pickImageFromGallery,
                         icon: const Icon(Icons.photo_library),
                         label: const Text('Из галереи'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
                         ),
                       ),
-                    ),
                     const SizedBox(width: 12),
-                  ],
-                ),
+
                 const SizedBox(height: 8),
 
                 // Или по URL
@@ -922,7 +1296,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   }
 
 
-// 🎯 ДИАЛОГ ДЛЯ ВВОДА URL
+//  ДИАЛОГ ДЛЯ ВВОДА URL
   void _showUrlInputDialog() {
     final urlController = TextEditingController();
 
@@ -965,7 +1339,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   }
 
 
-// 🎯 УДАЛЕНИЕ ИЗОБРАЖЕНИЯ
+//  УДАЛЕНИЕ ИЗОБРАЖЕНИЯ
   void _removeImage(String imageUrl) async {
     // Показываем диалог подтверждения
     final confirmed = await showDialog<bool>(
@@ -1049,7 +1423,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  // 🎯 СЕКЦИЯ НАСТРОЕК
+  //  СЕКЦИЯ НАСТРОЕК
   Widget _buildSettingsSection() {
     return Card(
       child: Padding(
@@ -1124,6 +1498,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _sizeController.dispose();
     _colorController.dispose();
     _stockController.dispose();
+    _materialController.dispose();
+    _careController.dispose();
+    _seasonController.dispose();
+    _specKeyController.dispose();
+    _specValueController.dispose();
     super.dispose();
   }
 }

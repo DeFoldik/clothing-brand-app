@@ -87,7 +87,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       const SizedBox(height: 4),
                       Text(user.email),
                       if (user.phone != null) Text(user.phone!),
-                      // 🆕 Показываем статус активности
+                      //  Показываем статус активности
                       Text(
                         user.isActive ? 'Активен' : 'Неактивен',
                         style: TextStyle(
@@ -138,7 +138,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       child: const Text('Убрать админку'),
                     ),
                   const Spacer(),
-                  // 🆕 Кнопка активации/деактивации
+                  //  Кнопка активации/деактивации
                   IconButton(
                     onPressed: () => _toggleUserStatus(user),
                     icon: Icon(
@@ -160,7 +160,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
   }
 
-// 🆕 Добавьте метод для переключения статуса
+//  Добавьте метод для переключения статуса
   Future<void> _toggleUserStatus(AppUser user) async {
     try {
       await AdminService.toggleUserStatus(user.uid, !user.isActive);

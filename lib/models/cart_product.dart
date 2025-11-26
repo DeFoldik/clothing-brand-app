@@ -14,7 +14,17 @@ class CartProduct {
     this.quantity = 1,
   });
 
-  double get totalPrice => product.price * quantity;
+  //  ИСПРАВЛЕНИЕ: Используем discountPrice если есть скидка
+  double get totalPrice {
+    final price = product.discountPrice ?? product.price;
+    return price * quantity;
+  }
+
+  //  ДОБАВЛЯЕМ: Получение актуальной цены за единицу
+  double get unitPrice => product.discountPrice ?? product.price;
+
+  //  ДОБАВЛЯЕМ: Проверка на наличие скидки
+  bool get hasDiscount => product.discountPrice != null;
 
   Map<String, dynamic> toJson() {
     return {
@@ -22,11 +32,11 @@ class CartProduct {
         'id': product.id,
         'title': product.title,
         'price': product.price,
+        'discountPrice': product.discountPrice, //  Сохраняем скидку
         'description': product.description,
-        'category': product.category.toFirestore(), // 🎯 ИСПРАВЛЕНО: используем toFirestore()
+        'category': product.category.toFirestore(),
         'image': product.image,
         'images': product.images,
-        'discountPrice': product.discountPrice,
         'isNew': product.isNew,
         'isPopular': product.isPopular,
         'sizes': product.sizes,
@@ -44,11 +54,11 @@ class CartProduct {
         id: json['product']['id'],
         title: json['product']['title'],
         price: (json['product']['price'] ?? 0.0).toDouble(),
+        discountPrice: json['product']['discountPrice']?.toDouble(), //  Загружаем скидку
         description: json['product']['description'],
-        category: ProductCategory.fromFirestore(json['product']['category'] ?? ''), // 🎯 ИСПРАВЛЕНО
+        category: ProductCategory.fromFirestore(json['product']['category'] ?? ''),
         image: json['product']['image'],
         images: List<String>.from(json['product']['images'] ?? []),
-        discountPrice: json['product']['discountPrice']?.toDouble(),
         isNew: json['product']['isNew'] ?? false,
         isPopular: json['product']['isPopular'] ?? false,
         sizes: List<String>.from(json['product']['sizes'] ?? []),
@@ -60,7 +70,6 @@ class CartProduct {
       quantity: json['quantity'] ?? 1,
     );
   }
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -72,4 +81,5 @@ class CartProduct {
 
   @override
   int get hashCode => Object.hash(product.id, size, color);
+
 }

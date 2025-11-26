@@ -27,7 +27,7 @@ class _DebugAuthScreenState extends State<DebugAuthScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 🎯 ТЕСТОВАЯ ФОРМА
+            //  ТЕСТОВАЯ ФОРМА
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -61,7 +61,7 @@ class _DebugAuthScreenState extends State<DebugAuthScreen> {
 
             const SizedBox(height: 20),
 
-            // 🎯 БЫСТРЫЕ ТЕСТЫ
+            //  БЫСТРЫЕ ТЕСТЫ
             const Text(
               'Быстрые тесты:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -81,7 +81,7 @@ class _DebugAuthScreenState extends State<DebugAuthScreen> {
 
             const SizedBox(height: 20),
 
-            // 🎯 СТАТУС
+            //  СТАТУС
             Card(
               color: Colors.grey[100],
               child: Padding(
@@ -104,7 +104,7 @@ class _DebugAuthScreenState extends State<DebugAuthScreen> {
               ),
             ),
 
-            // 🎯 ДЕЙСТВИЯ
+            //  ДЕЙСТВИЯ
             if (authProvider.isLoggedIn) ...[
               const SizedBox(height: 20),
               SizedBox(

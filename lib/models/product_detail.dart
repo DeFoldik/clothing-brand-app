@@ -10,7 +10,7 @@ class ProductDetail {
   final double price;
   final String description;
   final ProductCategory category;
-  final List<String> images; // 🎯 Теперь обязательное поле
+  final List<String> images;
   final List<ProductSize> availableSizes;
   final List<ProductColor> availableColors;
   final ProductSpecification specification;
@@ -21,13 +21,18 @@ class ProductDetail {
   final bool isFavorite;
   final String? sizeChartImage;
 
+  final String? material;
+  final String? careInstructions;
+  final String? season;
+  final Map<String, String>? additionalSpecs;
+
   ProductDetail({
     required this.id,
     required this.title,
     required this.price,
     required this.description,
     required this.category,
-    required this.images, // 🎯 Обязательный параметр
+    required this.images, // Обязательный параметр
     required this.availableSizes,
     required this.availableColors,
     required this.specification,
@@ -37,6 +42,10 @@ class ProductDetail {
     this.isNew = false,
     this.isFavorite = false,
     this.sizeChartImage,
+    this.material,
+    this.careInstructions,
+    this.season,
+    this.additionalSpecs,
   });
 
   double get discountPercent {
@@ -56,10 +65,14 @@ class ProductDetail {
       price: product.price,
       description: product.description,
       category: product.category,
-      images: product.images, // 🎯 Используем images из Product
+      images: product.images, //  Используем images из Product
       availableSizes: [],
       availableColors: [],
       specification: ProductSpecification(),
+      material: product.material,
+      careInstructions: product.careInstructions,
+      season: product.season,
+      additionalSpecs: product.additionalSpecs,
       sizeChartImage: 'https://via.placeholder.com/400x600/FFFFFF/000000?text=Size+Chart',
     );
   }
@@ -90,6 +103,10 @@ class ProductDetail {
       rating: rating,
       reviewCount: reviewCount,
       isNew: isNew,
+      material: product.material,
+      careInstructions: product.careInstructions,
+      season: product.season,
+      additionalSpecs: product.additionalSpecs,
       sizeChartImage: sizeChart,
     );
   }

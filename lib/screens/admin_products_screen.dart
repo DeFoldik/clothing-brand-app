@@ -118,7 +118,9 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                   image: DecorationImage(
-                    image: NetworkImage(product.image),
+                    image: NetworkImage(product.images.isNotEmpty
+                        ? product.images.first
+                        : product.image),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -203,8 +205,6 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
       ),
     );
   }
-
-  // screens/admin_products_screen.dart
 
   Future<void> _deleteProduct(Product product) async {
     final confirmed = await showDialog<bool>(
