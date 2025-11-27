@@ -139,14 +139,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     ),
                   const Spacer(),
                   //  Кнопка активации/деактивации
-                  IconButton(
+                  /*IconButton(
                     onPressed: () => _toggleUserStatus(user),
                     icon: Icon(
                       user.isActive ? Icons.person_off : Icons.person,
                       color: user.isActive ? Colors.orange : Colors.green,
                     ),
                     tooltip: user.isActive ? 'Деактивировать' : 'Активировать',
-                  ),
+                  ),*/
                   IconButton(
                     onPressed: () => _deleteUser(user),
                     icon: const Icon(Icons.delete, color: Colors.red),

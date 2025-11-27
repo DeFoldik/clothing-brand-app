@@ -244,12 +244,22 @@ class AuthProvider with ChangeNotifier {
 
   String _getAuthErrorMessage(String code) {
     switch (code) {
+      case 'invalid-credential': return 'Проверьте введеные данные';
       case 'user-not-found': return 'Пользователь не найден';
       case 'wrong-password': return 'Неверный пароль';
       case 'email-already-in-use': return 'Email уже используется';
       case 'weak-password': return 'Пароль слишком слабый';
       case 'invalid-email': return 'Неверный формат email';
-      default: return 'Произошла ошибка: $code';
+      case 'network-request-failed':
+        return 'Ошибка сети. Проверьте подключение к интернету';
+      case 'too-many-requests':
+        return 'Слишком много попыток. Попробуйте позже';
+      case 'user-disabled':
+        return 'Аккаунт заблокирован';
+      case 'operation-not-allowed':
+        return 'Операция не разрешена';
+      default:
+        return 'Произошла ошибка. Попробуйте снова';
     }
   }
 

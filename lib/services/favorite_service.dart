@@ -116,4 +116,6 @@ class FavoriteService {
       print('❌ Ошибка миграции лайков: $e');
     }
   }
+
+
 }

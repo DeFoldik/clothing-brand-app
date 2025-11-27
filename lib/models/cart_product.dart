@@ -14,16 +14,13 @@ class CartProduct {
     this.quantity = 1,
   });
 
-  //  ИСПРАВЛЕНИЕ: Используем discountPrice если есть скидка
   double get totalPrice {
     final price = product.discountPrice ?? product.price;
     return price * quantity;
   }
 
-  //  ДОБАВЛЯЕМ: Получение актуальной цены за единицу
   double get unitPrice => product.discountPrice ?? product.price;
 
-  //  ДОБАВЛЯЕМ: Проверка на наличие скидки
   bool get hasDiscount => product.discountPrice != null;
 
   Map<String, dynamic> toJson() {

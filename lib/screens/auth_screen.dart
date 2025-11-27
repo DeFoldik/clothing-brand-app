@@ -52,8 +52,27 @@ class _AuthScreenState extends State<AuthScreen> {
     }
 
     if (authProvider.error != null) {
+      final errorMessage = authProvider.error!;
+      final isAuthError = errorMessage.contains('логин') ||
+          errorMessage.contains('пароль') ||
+          errorMessage.contains('email') ||
+          errorMessage.contains('пользователь') ||
+          errorMessage.contains('сеть');
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error!)),
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(errorMessage)),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       );
     }
   }
